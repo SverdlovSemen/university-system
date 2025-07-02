@@ -35,7 +35,9 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-	implementation("org.flywaydb:flyway-core")
+	implementation("org.flywaydb:flyway-core:11.10.0")
+	implementation("org.flywaydb:flyway-database-postgresql:11.10.0")
+	implementation("org.postgresql:postgresql:42.7.7")
 }
 
 tasks.withType<Test> {
