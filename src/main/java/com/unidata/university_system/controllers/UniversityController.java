@@ -1,7 +1,7 @@
 package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.models.University;
-import com.unidata.university_system.repositories.UniversityRepository;
+import com.unidata.university_system.services.UniversityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,16 +13,37 @@ import java.util.List;
 public class UniversityController {
 
     @Autowired
-    private UniversityRepository universityRepository;
+    private UniversityService universityService;
 
     @GetMapping
     public List<University> getAllUniversities() {
-        return universityRepository.findAll();
+        return universityService.getAllUniversities();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<University> getUniversityById(@PathVariable Long id) {
+        return universityService.getUniversityById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<University> createUniversity(@RequestBody University university) {
-        University savedUniversity = universityRepository.save(university);
-        return ResponseEntity.ok(savedUniversity);
+    public University createUniversity(@RequestBody University university) {
+        return universityService.createUniversity(university);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<University> updateUniversity(@PathVariable Long id, @RequestBody University updatedUniversity) {
+        return universityService.updateUniversity(id, updatedUniversity)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUniversity(@PathVariable Long id) {
+        if (universityService.deleteUniversity(id)) {
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }
