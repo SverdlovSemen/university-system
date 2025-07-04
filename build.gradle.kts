@@ -39,6 +39,12 @@ dependencies {
 	implementation("org.flywaydb:flyway-database-postgresql:11.10.0")
 	implementation("org.postgresql:postgresql:42.7.7")
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+	//JWT
+	implementation("com.auth0:java-jwt:4.4.0")
+	//Testing
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.junit.jupiter:junit-jupiter-api")
+	testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
 
 tasks.withType<Test> {
