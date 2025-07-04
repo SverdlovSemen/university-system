@@ -46,4 +46,9 @@ public class FacultyController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    @GetMapping("/by-university/{universityId}")
+    public List<Faculty> getFacultiesByUniversity(@PathVariable Long universityId) {
+        return facultyService.getFacultiesByUniversity(universityId);
+    }
 }

@@ -46,4 +46,9 @@ public class SpecialtyController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    @GetMapping("/by-faculty/{facultyId}")
+    public List<Specialty> getSpecialtiesByFaculty(@PathVariable Long facultyId) {
+        return specialtyService.getSpecialtiesByFaculty(facultyId);
+    }
 }

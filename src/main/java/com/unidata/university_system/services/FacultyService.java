@@ -42,4 +42,8 @@ public class FacultyService {
         }
         return false;
     }
+
+    public List<Faculty> getFacultiesByUniversity(Long universityId) {
+        return facultyRepository.findByUniversityId(universityId);
+    }
 }

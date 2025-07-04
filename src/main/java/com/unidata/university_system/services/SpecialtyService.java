@@ -42,4 +42,16 @@ public class SpecialtyService {
         }
         return false;
     }
+
+    public List<Specialty> getSpecialtiesByFaculty(Long facultyId) {
+        return specialtyRepository.findByFacultyId(facultyId);
+    }
+
+    public List<Specialty> getSpecialtiesByUniversity(Long universityId) {
+        return specialtyRepository.findByUniversityId(universityId);
+    }
+
+    public List<Specialty> searchSpecialties(Long universityId, String level, String form, String subject) {
+        return specialtyRepository.searchSpecialties(universityId, level, form, subject);
+    }
 }
