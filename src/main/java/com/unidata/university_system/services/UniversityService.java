@@ -43,8 +43,15 @@ public class UniversityService {
         return false;
     }
 
-
     public List<University> searchUniversities(String name, String region, String type) {
         return universityRepository.search(name, region, type);
+    }
+
+    public Long getUniversitiesCount() {
+        return universityRepository.getUniversitiesCount();
+    }
+
+    public List<Object[]> getUniversitiesByRegion() {
+        return universityRepository.getUniversitiesByRegion();
     }
 }

@@ -62,4 +62,14 @@ public class UniversityController {
             @RequestParam(required = false) String type) {
         return universityService.searchUniversities(name, region, type);
     }
+
+    @GetMapping("/analytics/count")
+    public Long getUniversitiesCount() {
+        return universityService.getUniversitiesCount();
+    }
+
+    @GetMapping("/analytics/by-region")
+    public List<Object[]> getUniversitiesByRegion() {
+        return universityService.getUniversitiesByRegion();
+    }
 }

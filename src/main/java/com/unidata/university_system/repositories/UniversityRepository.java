@@ -30,4 +30,11 @@ public interface UniversityRepository extends JpaRepository<University, Long> {
             @Param("region") String region,
             @Param("type") String type
     );
+
+    // Методы для аналитики
+    @Query("SELECT COUNT(u) FROM University u")
+    Long getUniversitiesCount();
+
+    @Query("SELECT u.city.region.name, COUNT(u) FROM University u GROUP BY u.city.region.name")
+    List<Object[]> getUniversitiesByRegion();
 }

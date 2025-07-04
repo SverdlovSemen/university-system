@@ -51,4 +51,19 @@ public class SpecialtyController {
     public List<Specialty> getSpecialtiesByFaculty(@PathVariable Long facultyId) {
         return specialtyService.getSpecialtiesByFaculty(facultyId);
     }
+
+
+    @GetMapping("/by-university/{universityId}")
+    public List<Specialty> getSpecialtiesByUniversity(@PathVariable Long universityId) {
+        return specialtyService.getSpecialtiesByUniversity(universityId);
+    }
+
+    @GetMapping("/search")
+    public List<Specialty> searchSpecialties(
+            @RequestParam(required = false) Long universityId,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String form,
+            @RequestParam(required = false) String subject) {
+        return specialtyService.searchSpecialties(universityId, level, form, subject);
+    }
 }
