@@ -19,4 +19,10 @@ public class Subject {
 
     @ManyToMany(mappedBy = "subjects")
     private List<SubjectCombination> subjectCombinations;
+
+    public Subject() {}
+
+    public Subject(String subjName) {
+        this.name = subjName;
+    }
 }

@@ -19,4 +19,10 @@ public class Region {
 
     @OneToMany(mappedBy = "region", cascade = CascadeType.ALL)
     private List<City> cities;
+
+    public Region() {}
+
+    public Region(String regionName) {
+        this.name = regionName;
+    }
 }
