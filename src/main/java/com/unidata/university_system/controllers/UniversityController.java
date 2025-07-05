@@ -3,6 +3,8 @@ package com.unidata.university_system.controllers;
 import com.unidata.university_system.models.Faculty;
 import com.unidata.university_system.models.University;
 import com.unidata.university_system.services.UniversityService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.OneToMany;
 import org.springframework.beans.factory.annotation.Autowired;
