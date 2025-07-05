@@ -38,7 +38,7 @@ dependencies {
 	implementation("org.flywaydb:flyway-core:11.10.0")
 	implementation("org.flywaydb:flyway-database-postgresql:11.10.0")
 	implementation("org.postgresql:postgresql:42.7.7")
-	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
 	//JWT
 	implementation("com.auth0:java-jwt:4.4.0")
 	//Testing
