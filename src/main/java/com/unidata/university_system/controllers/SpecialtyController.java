@@ -1,6 +1,7 @@
 package com.unidata.university_system.controllers;
 
-import com.unidata.university_system.models.Specialty;
+import com.unidata.university_system.dto.SpecialtyRequest;
+import com.unidata.university_system.dto.SpecialtyResponse;
 import com.unidata.university_system.services.SpecialtyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,25 +17,25 @@ public class SpecialtyController {
     private SpecialtyService specialtyService;
 
     @GetMapping
-    public List<Specialty> getAllSpecialties() {
+    public List<SpecialtyResponse> getAllSpecialties() {
         return specialtyService.getAllSpecialties();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Specialty> getSpecialtyById(@PathVariable Long id) {
+    public ResponseEntity<SpecialtyResponse> getSpecialtyById(@PathVariable Long id) {
         return specialtyService.getSpecialtyById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Specialty createSpecialty(@RequestBody Specialty specialty) {
-        return specialtyService.createSpecialty(specialty);
+    public SpecialtyResponse createSpecialty(@RequestBody SpecialtyRequest request) {
+        return specialtyService.createSpecialty(request);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Specialty> updateSpecialty(@PathVariable Long id, @RequestBody Specialty updatedSpecialty) {
-        return specialtyService.updateSpecialty(id, updatedSpecialty)
+    public ResponseEntity<SpecialtyResponse> updateSpecialty(@PathVariable Long id, @RequestBody SpecialtyRequest request) {
+        return specialtyService.updateSpecialty(id, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -48,18 +49,17 @@ public class SpecialtyController {
     }
 
     @GetMapping("/by-faculty/{facultyId}")
-    public List<Specialty> getSpecialtiesByFaculty(@PathVariable Long facultyId) {
+    public List<SpecialtyResponse> getSpecialtiesByFaculty(@PathVariable Long facultyId) {
         return specialtyService.getSpecialtiesByFaculty(facultyId);
     }
 
-
     @GetMapping("/by-university/{universityId}")
-    public List<Specialty> getSpecialtiesByUniversity(@PathVariable Long universityId) {
+    public List<SpecialtyResponse> getSpecialtiesByUniversity(@PathVariable Long universityId) {
         return specialtyService.getSpecialtiesByUniversity(universityId);
     }
 
     @GetMapping("/search")
-    public List<Specialty> searchSpecialties(
+    public List<SpecialtyResponse> searchSpecialties(
             @RequestParam(required = false) Long universityId,
             @RequestParam(required = false) String level,
             @RequestParam(required = false) String form,

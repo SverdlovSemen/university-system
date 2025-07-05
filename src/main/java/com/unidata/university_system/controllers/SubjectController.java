@@ -1,6 +1,7 @@
 package com.unidata.university_system.controllers;
 
-import com.unidata.university_system.models.Subject;
+import com.unidata.university_system.dto.SubjectRequest;
+import com.unidata.university_system.dto.SubjectResponse;
 import com.unidata.university_system.services.SubjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,25 +17,25 @@ public class SubjectController {
     private SubjectService subjectService;
 
     @GetMapping
-    public List<Subject> getAllSubjects() {
+    public List<SubjectResponse> getAllSubjects() {
         return subjectService.getAllSubjects();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Subject> getSubjectById(@PathVariable Long id) {
+    public ResponseEntity<SubjectResponse> getSubjectById(@PathVariable Long id) {
         return subjectService.getSubjectById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Subject createSubject(@RequestBody Subject subject) {
-        return subjectService.createSubject(subject);
+    public SubjectResponse createSubject(@RequestBody SubjectRequest request) {
+        return subjectService.createSubject(request);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Subject> updateSubject(@PathVariable Long id, @RequestBody Subject updatedSubject) {
-        return subjectService.updateSubject(id, updatedSubject)
+    public ResponseEntity<SubjectResponse> updateSubject(@PathVariable Long id, @RequestBody SubjectRequest request) {
+        return subjectService.updateSubject(id, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

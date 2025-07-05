@@ -1,17 +1,12 @@
 package com.unidata.university_system.controllers;
 
-import com.unidata.university_system.models.Faculty;
-import com.unidata.university_system.models.University;
+import com.unidata.university_system.dto.UniversityRequest;
+import com.unidata.university_system.dto.UniversityResponse;
 import com.unidata.university_system.services.UniversityService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.OneToMany;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -21,29 +16,26 @@ public class UniversityController {
     @Autowired
     private UniversityService universityService;
 
-    @OneToMany(mappedBy = "university", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Faculty> faculties = new ArrayList<>();
-
     @GetMapping
-    public List<University> getAllUniversities() {
+    public List<UniversityResponse> getAllUniversities() {
         return universityService.getAllUniversities();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<University> getUniversityById(@PathVariable Long id) {
+    public ResponseEntity<UniversityResponse> getUniversityById(@PathVariable Long id) {
         return universityService.getUniversityById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public University createUniversity(@RequestBody University university) {
-        return universityService.createUniversity(university);
+    public UniversityResponse createUniversity(@RequestBody UniversityRequest request) {
+        return universityService.createUniversity(request);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<University> updateUniversity(@PathVariable Long id, @RequestBody University updatedUniversity) {
-        return universityService.updateUniversity(id, updatedUniversity)
+    public ResponseEntity<UniversityResponse> updateUniversity(@PathVariable Long id, @RequestBody UniversityRequest request) {
+        return universityService.updateUniversity(id, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -56,9 +48,8 @@ public class UniversityController {
         return ResponseEntity.notFound().build();
     }
 
-
     @GetMapping("/search")
-    public List<University> searchUniversities(
+    public List<UniversityResponse> searchUniversities(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String region,
             @RequestParam(required = false) String type) {

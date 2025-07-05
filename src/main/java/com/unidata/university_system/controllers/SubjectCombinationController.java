@@ -1,6 +1,7 @@
 package com.unidata.university_system.controllers;
 
-import com.unidata.university_system.models.SubjectCombination;
+import com.unidata.university_system.dto.SubjectCombinationRequest;
+import com.unidata.university_system.dto.SubjectCombinationResponse;
 import com.unidata.university_system.services.SubjectCombinationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,25 +17,25 @@ public class SubjectCombinationController {
     private SubjectCombinationService subjectCombinationService;
 
     @GetMapping
-    public List<SubjectCombination> getAllSubjectCombinations() {
+    public List<SubjectCombinationResponse> getAllSubjectCombinations() {
         return subjectCombinationService.getAllSubjectCombinations();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SubjectCombination> getSubjectCombinationById(@PathVariable Long id) {
+    public ResponseEntity<SubjectCombinationResponse> getSubjectCombinationById(@PathVariable Long id) {
         return subjectCombinationService.getSubjectCombinationById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public SubjectCombination createSubjectCombination(@RequestBody SubjectCombination subjectCombination) {
-        return subjectCombinationService.createSubjectCombination(subjectCombination);
+    public SubjectCombinationResponse createSubjectCombination(@RequestBody SubjectCombinationRequest request) {
+        return subjectCombinationService.createSubjectCombination(request);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SubjectCombination> updateSubjectCombination(@PathVariable Long id, @RequestBody SubjectCombination updatedSubjectCombination) {
-        return subjectCombinationService.updateSubjectCombination(id, updatedSubjectCombination)
+    public ResponseEntity<SubjectCombinationResponse> updateSubjectCombination(@PathVariable Long id, @RequestBody SubjectCombinationRequest request) {
+        return subjectCombinationService.updateSubjectCombination(id, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

@@ -1,5 +1,8 @@
 package com.unidata.university_system.services;
 
+import com.unidata.university_system.dto.CityRequest;
+import com.unidata.university_system.dto.CityResponse;
+import com.unidata.university_system.mapper.CityMapper;
 import com.unidata.university_system.models.City;
 import com.unidata.university_system.repositories.CityRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class CityService {
@@ -14,23 +18,33 @@ public class CityService {
     @Autowired
     private CityRepository cityRepository;
 
-    public List<City> getAllCities() {
-        return cityRepository.findAll();
+    @Autowired
+    private CityMapper cityMapper;
+
+    public List<CityResponse> getAllCities() {
+        return cityRepository.findAll().stream()
+                .map(cityMapper::fromCity)
+                .collect(Collectors.toList());
     }
 
-    public Optional<City> getCityById(Long id) {
-        return cityRepository.findById(id);
+    public Optional<CityResponse> getCityById(Long id) {
+        return cityRepository.findById(id)
+                .map(cityMapper::fromCity);
     }
 
-    public City createCity(City city) {
-        return cityRepository.save(city);
+    public CityResponse createCity(CityRequest request) {
+        City city = cityMapper.toCity(request);
+        City savedCity = cityRepository.save(city);
+        return cityMapper.fromCity(savedCity);
     }
 
-    public Optional<City> updateCity(Long id, City updatedCity) {
+    public Optional<CityResponse> updateCity(Long id, CityRequest request) {
         Optional<City> existingCity = cityRepository.findById(id);
         if (existingCity.isPresent()) {
-            updatedCity.setId(id);
-            return Optional.of(cityRepository.save(updatedCity));
+            City updatedCity = cityMapper.toCity(request);
+            updatedCity.setId(id); // Ensure ID is preserved
+            City savedCity = cityRepository.save(updatedCity);
+            return Optional.of(cityMapper.fromCity(savedCity));
         }
         return Optional.empty();
     }

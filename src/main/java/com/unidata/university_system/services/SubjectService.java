@@ -1,5 +1,8 @@
 package com.unidata.university_system.services;
 
+import com.unidata.university_system.dto.SubjectRequest;
+import com.unidata.university_system.dto.SubjectResponse;
+import com.unidata.university_system.mapper.SubjectMapper;
 import com.unidata.university_system.models.Subject;
 import com.unidata.university_system.repositories.SubjectRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class SubjectService {
@@ -14,23 +18,33 @@ public class SubjectService {
     @Autowired
     private SubjectRepository subjectRepository;
 
-    public List<Subject> getAllSubjects() {
-        return subjectRepository.findAll();
+    @Autowired
+    private SubjectMapper subjectMapper;
+
+    public List<SubjectResponse> getAllSubjects() {
+        return subjectRepository.findAll().stream()
+                .map(subjectMapper::fromSubject)
+                .collect(Collectors.toList());
     }
 
-    public Optional<Subject> getSubjectById(Long id) {
-        return subjectRepository.findById(id);
+    public Optional<SubjectResponse> getSubjectById(Long id) {
+        return subjectRepository.findById(id)
+                .map(subjectMapper::fromSubject);
     }
 
-    public Subject createSubject(Subject subject) {
-        return subjectRepository.save(subject);
+    public SubjectResponse createSubject(SubjectRequest request) {
+        Subject subject = subjectMapper.toSubject(request);
+        Subject savedSubject = subjectRepository.save(subject);
+        return subjectMapper.fromSubject(savedSubject);
     }
 
-    public Optional<Subject> updateSubject(Long id, Subject updatedSubject) {
+    public Optional<SubjectResponse> updateSubject(Long id, SubjectRequest request) {
         Optional<Subject> existingSubject = subjectRepository.findById(id);
         if (existingSubject.isPresent()) {
-            updatedSubject.setId(id);
-            return Optional.of(subjectRepository.save(updatedSubject));
+            Subject updatedSubject = subjectMapper.toSubject(request);
+            updatedSubject.setId(id); // Ensure ID is preserved
+            Subject savedSubject = subjectRepository.save(updatedSubject);
+            return Optional.of(subjectMapper.fromSubject(savedSubject));
         }
         return Optional.empty();
     }

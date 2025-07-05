@@ -1,6 +1,7 @@
 package com.unidata.university_system.controllers;
 
-import com.unidata.university_system.models.Region;
+import com.unidata.university_system.dto.RegionRequest;
+import com.unidata.university_system.dto.RegionResponse;
 import com.unidata.university_system.services.RegionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,25 +17,25 @@ public class RegionController {
     private RegionService regionService;
 
     @GetMapping
-    public List<Region> getAllRegions() {
+    public List<RegionResponse> getAllRegions() {
         return regionService.getAllRegions();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Region> getRegionById(@PathVariable Long id) {
+    public ResponseEntity<RegionResponse> getRegionById(@PathVariable Long id) {
         return regionService.getRegionById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Region createRegion(@RequestBody Region region) {
-        return regionService.createRegion(region);
+    public RegionResponse createRegion(@RequestBody RegionRequest request) {
+        return regionService.createRegion(request);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Region> updateRegion(@PathVariable Long id, @RequestBody Region updatedRegion) {
-        return regionService.updateRegion(id, updatedRegion)
+    public ResponseEntity<RegionResponse> updateRegion(@PathVariable Long id, @RequestBody RegionRequest request) {
+        return regionService.updateRegion(id, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

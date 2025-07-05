@@ -1,12 +1,18 @@
 package com.unidata.university_system.services;
 
+import com.unidata.university_system.dto.FacultyRequest;
+import com.unidata.university_system.dto.FacultyResponse;
+import com.unidata.university_system.mapper.FacultyMapper;
 import com.unidata.university_system.models.Faculty;
+import com.unidata.university_system.models.University;
 import com.unidata.university_system.repositories.FacultyRepository;
+import com.unidata.university_system.repositories.UniversityRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class FacultyService {
@@ -14,23 +20,37 @@ public class FacultyService {
     @Autowired
     private FacultyRepository facultyRepository;
 
-    public List<Faculty> getAllFaculties() {
-        return facultyRepository.findAll();
+    @Autowired
+    private UniversityRepository universityRepository;
+
+    @Autowired
+    private FacultyMapper facultyMapper;
+
+    public List<FacultyResponse> getAllFaculties() {
+        return facultyRepository.findAll().stream()
+                .map(facultyMapper::fromFaculty)
+                .collect(Collectors.toList());
     }
 
-    public Optional<Faculty> getFacultyById(Long id) {
-        return facultyRepository.findById(id);
+    public Optional<FacultyResponse> getFacultyById(Long id) {
+        return facultyRepository.findById(id)
+                .map(facultyMapper::fromFaculty);
     }
 
-    public Faculty createFaculty(Faculty faculty) {
-        return facultyRepository.save(faculty);
+    public FacultyResponse createFaculty(FacultyRequest request) {
+        Faculty faculty = facultyMapper.toFaculty(request);
+        // University is set in FacultyMapper using universityId
+        Faculty savedFaculty = facultyRepository.save(faculty);
+        return facultyMapper.fromFaculty(savedFaculty);
     }
 
-    public Optional<Faculty> updateFaculty(Long id, Faculty updatedFaculty) {
+    public Optional<FacultyResponse> updateFaculty(Long id, FacultyRequest request) {
         Optional<Faculty> existingFaculty = facultyRepository.findById(id);
         if (existingFaculty.isPresent()) {
-            updatedFaculty.setId(id);
-            return Optional.of(facultyRepository.save(updatedFaculty));
+            Faculty updatedFaculty = facultyMapper.toFaculty(request);
+            updatedFaculty.setId(id); // Ensure ID is preserved
+            Faculty savedFaculty = facultyRepository.save(updatedFaculty);
+            return Optional.of(facultyMapper.fromFaculty(savedFaculty));
         }
         return Optional.empty();
     }
@@ -43,7 +63,9 @@ public class FacultyService {
         return false;
     }
 
-    public List<Faculty> getFacultiesByUniversity(Long universityId) {
-        return facultyRepository.findByUniversityId(universityId);
+    public List<FacultyResponse> getFacultiesByUniversity(Long universityId) {
+        return facultyRepository.findByUniversityId(universityId).stream()
+                .map(facultyMapper::fromFaculty)
+                .collect(Collectors.toList());
     }
 }

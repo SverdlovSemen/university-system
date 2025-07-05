@@ -3,6 +3,8 @@ package com.unidata.university_system.mapper;
 import com.unidata.university_system.dto.FacultyRequest;
 import com.unidata.university_system.dto.FacultyResponse;
 import com.unidata.university_system.models.Faculty;
+import com.unidata.university_system.models.University;
+import com.unidata.university_system.repositories.UniversityRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,12 +18,16 @@ public class FacultyMapper {
     @Autowired
     private SpecialtyMapper specialtyMapper;
 
+    @Autowired
+    private UniversityRepository universityRepository; // Use repository instead of service
+
     public Faculty toFaculty(FacultyRequest request) {
         if (request == null) return null;
         Faculty faculty = new Faculty();
         faculty.setId(request.id());
         faculty.setName(request.name());
-        // University must be set separately (e.g., in service layer)
+        faculty.setUniversity(universityRepository.findById(request.universityId())
+                .orElseThrow(() -> new IllegalArgumentException("University not found with ID: " + request.universityId())));
         faculty.setSpecialties(request.specialties() != null ?
                 request.specialties().stream()
                         .map(specialtyMapper::toSpecialty)

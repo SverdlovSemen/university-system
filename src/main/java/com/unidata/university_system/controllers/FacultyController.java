@@ -1,6 +1,7 @@
 package com.unidata.university_system.controllers;
 
-import com.unidata.university_system.models.Faculty;
+import com.unidata.university_system.dto.FacultyRequest;
+import com.unidata.university_system.dto.FacultyResponse;
 import com.unidata.university_system.services.FacultyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,25 +17,25 @@ public class FacultyController {
     private FacultyService facultyService;
 
     @GetMapping
-    public List<Faculty> getAllFaculties() {
+    public List<FacultyResponse> getAllFaculties() {
         return facultyService.getAllFaculties();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Faculty> getFacultyById(@PathVariable Long id) {
+    public ResponseEntity<FacultyResponse> getFacultyById(@PathVariable Long id) {
         return facultyService.getFacultyById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Faculty createFaculty(@RequestBody Faculty faculty) {
-        return facultyService.createFaculty(faculty);
+    public FacultyResponse createFaculty(@RequestBody FacultyRequest request) {
+        return facultyService.createFaculty(request);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Faculty> updateFaculty(@PathVariable Long id, @RequestBody Faculty updatedFaculty) {
-        return facultyService.updateFaculty(id, updatedFaculty)
+    public ResponseEntity<FacultyResponse> updateFaculty(@PathVariable Long id, @RequestBody FacultyRequest request) {
+        return facultyService.updateFaculty(id, request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -48,7 +49,7 @@ public class FacultyController {
     }
 
     @GetMapping("/by-university/{universityId}")
-    public List<Faculty> getFacultiesByUniversity(@PathVariable Long universityId) {
+    public List<FacultyResponse> getFacultiesByUniversity(@PathVariable Long universityId) {
         return facultyService.getFacultiesByUniversity(universityId);
     }
 }

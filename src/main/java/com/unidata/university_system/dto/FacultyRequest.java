@@ -10,6 +10,8 @@ public record FacultyRequest(
         Long id,
         @NotBlank(message = "Faculty name must not be empty")
         String name,
+        @NotNull(message = "University ID must be provided")
+        Long universityId,
         List<SpecialtyRequest> specialties
 ) {
 }
