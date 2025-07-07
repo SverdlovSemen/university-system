@@ -9,6 +9,7 @@ import com.unidata.university_system.repositories.RoleRepository;
 import com.unidata.university_system.repositories.UserRepository;
 import com.unidata.university_system.services.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,70 +29,51 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AuthController {
 
-    // Основные зависимости
-    private final AuthenticationManager authenticationManager;// Проверяет учетные данные пользователя
-    private final UserRepository userRepository; // Работа с пользователями в бд
-    private final RoleRepository roleRepository; // Работа с ролями пользователей
-    private final PasswordEncoder passwordEncoder; // Шифрование паролей
-    private final JwtService jwtService; // Генерируем JWT токены
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-    /**
-     * Обработка запроса на вход
-     * @param request Данные аутентификации (username и password)
-     * @return JWT токен
-     */
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
-        // 1. Аутентификация пользователя
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.username(),
-                        request.password()
-                )
-        );
-
-        // 2. Получение аутентифицированного пользователя
-        User user = (User) authentication.getPrincipal();
-
-        // 3. Генерация JWT токена
-        String token = jwtService.generateToken(user);
-
-        // 4. Возврат токена в ответе
-        return ResponseEntity.ok(new AuthResponse(token));
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.username(),
+                            request.password()
+                    )
+            );
+            User user = (User) authentication.getPrincipal();
+            String token = jwtService.generateToken(user);
+            return ResponseEntity.ok(new AuthResponse(token));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthResponse(null, "Invalid username or password"));
+        }
     }
 
-    /**
-     * Обработка запроса на регистрацию
-     * @param request Данные для регистрации (username и password)
-     * @return JWT токен для нового пользователя
-     */
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-        // 1. Проверка существования пользователя
         if (userRepository.existsByUsername(request.username())) {
-            throw new RuntimeException("Username already exists");
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new AuthResponse(null, "Username already exists"));
         }
 
-        // 2. Создание нового пользователя
         User user = new User();
         user.setUsername(request.username());
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setEnabled(true);
 
-        // 3. Назначение роли USER по умолчанию
         Optional<Role> userRole = roleRepository.findByRoleName("ROLE_USER");
         if (userRole.isEmpty()) {
-            throw new RuntimeException("Default role 'ROLE_USER' not found. Please initialize roles in the database.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new AuthResponse(null, "Default role 'ROLE_USER' not found"));
         }
         user.setRoles(Collections.singleton(userRole.get()));
 
-        // 4. Сохранение пользователя
         userRepository.save(user);
-
-        // 5. Генерация токена для нового пользователя
         String token = jwtService.generateToken(user);
-
-        // 6. Возврат токена в ответе
         return ResponseEntity.ok(new AuthResponse(token));
     }
 }

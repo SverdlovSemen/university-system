@@ -5,6 +5,7 @@ import com.unidata.university_system.services.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -29,81 +30,102 @@ import java.util.Collections;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Для работы @PreAuthorize
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final CustomUserDetailsService userDetailsService;
-    private final LogoutHandler logoutHandler; // Пока не реализован
+    private final LogoutHandler logoutHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Отключаем CSRF для API
+                // Disable CSRF for stateless API
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // Настройка CORS
+                // CORS configuration
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // Настройка авторизации запросов
+                // Authorization rules
                 .authorizeHttpRequests(auth -> auth
-                        // Публичные эндпоинты
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**"
-                        ).permitAll()
+                        // Public endpoints (no authentication required)
+                        .requestMatchers(HttpMethod.GET, "/api/universities/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/faculties/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/specialties/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/subjects/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/subject-combinations/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/cities/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/regions/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        // Административные эндпоинты
-                        .requestMatchers(
-                                "/api/admin/**",
-                                "/api/universities/import"
-                        ).hasRole("ADMIN")
+                        // ROLE_USER endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/universities/analytics/**").hasRole("USER")
+                        .requestMatchers(HttpMethod.POST, "/api/assistant/query").hasRole("USER")
 
-                        // Все остальные запросы требуют аутентификации
+                        // ROLE_ADMIN endpoints
+                        .requestMatchers(HttpMethod.POST, "/api/universities").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/universities/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/universities/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/universities/import").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/faculties").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/faculties/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/faculties/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/specialties").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/specialties/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/specialties/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/subjects").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/subjects/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/subjects/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/subject-combinations").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/subject-combinations/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/subject-combinations/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/cities").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/cities/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/cities/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/regions").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/regions/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/regions/{id}").hasRole("ADMIN")
+
+                        // All other requests require authentication
                         .anyRequest().authenticated()
                 )
 
-                // Настройка сессий (без состояния)
+                // Stateless session management
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                // Добавляем кастомный AuthenticationProvider
+                // Authentication provider
                 .authenticationProvider(authenticationProvider())
 
-                // Добавляем JWT фильтр перед стандартным фильтром аутентификации
+                // Add JWT filter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
 
-                // Настройка выхода (пока заглушка)
+                // Logout configuration
                 .logout(logout -> logout
                         .logoutUrl("/api/auth/logout")
                         .addLogoutHandler(logoutHandler)
-                        .logoutSuccessHandler(
-                                (request, response, authentication) ->
-                                        SecurityContextHolder.clearContext()
+                        .logoutSuccessHandler((request, response, authentication) ->
+                                SecurityContextHolder.clearContext()
                         )
                 );
 
         return http.build();
     }
 
-    // Конфигурация CORS
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Collections.singletonList("*")); // Разрешить все источники
+        configuration.setAllowedOrigins(Collections.singletonList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Collections.singletonList("*"));
         configuration.setExposedHeaders(Collections.singletonList("Authorization"));
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 
-    // Провайдер аутентификации
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -112,13 +134,11 @@ public class SecurityConfig {
         return authProvider;
     }
 
-    // Кодировщик паролей
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // Менеджер аутентификации
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
