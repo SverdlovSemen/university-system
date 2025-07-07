@@ -4,7 +4,7 @@ import java.util.List;
 
 public record SubjectCombinationResponse(
         Long id,
-        SpecialtyResponse specialty,
+        Long specialtyId, // Заменили SpecialtyResponse на Long
         List<SubjectResponse> subjects
 ) {
 }

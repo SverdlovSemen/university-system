@@ -14,11 +14,8 @@ public class Subject {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
-
-    @ManyToMany(mappedBy = "subjects")
-    private List<SubjectCombination> subjectCombinations;
 
     public Subject() {}
 

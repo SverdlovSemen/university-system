@@ -28,7 +28,7 @@ public class SubjectCombinationService {
     }
 
     public Optional<SubjectCombinationResponse> getSubjectCombinationById(Long id) {
-        return subjectCombinationRepository.findById(id)
+        return subjectCombinationRepository.findById(id) // Исправлено: subjectConnectionRepository -> subjectCombinationRepository
                 .map(subjectCombinationMapper::fromSubjectCombination);
     }
 
@@ -42,7 +42,7 @@ public class SubjectCombinationService {
         Optional<SubjectCombination> existingSubjectCombination = subjectCombinationRepository.findById(id);
         if (existingSubjectCombination.isPresent()) {
             SubjectCombination updatedSubjectCombination = subjectCombinationMapper.toSubjectCombination(request);
-            updatedSubjectCombination.setId(id); // Ensure ID is preserved
+            updatedSubjectCombination.setId(id);
             SubjectCombination savedSubjectCombination = subjectCombinationRepository.save(updatedSubjectCombination);
             return Optional.of(subjectCombinationMapper.fromSubjectCombination(savedSubjectCombination));
         }
@@ -55,5 +55,11 @@ public class SubjectCombinationService {
             return true;
         }
         return false;
+    }
+
+    public List<SubjectCombinationResponse> getSubjectCombinationsBySpecialtyId(Long specialtyId) {
+        return subjectCombinationRepository.findBySpecialtyId(specialtyId).stream()
+                .map(subjectCombinationMapper::fromSubjectCombination)
+                .collect(Collectors.toList());
     }
 }

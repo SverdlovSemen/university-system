@@ -20,9 +20,9 @@ public class SubjectCombination {
 
     @ManyToMany
     @JoinTable(
-            name = "required_subject",
-            joinColumns = @JoinColumn(name = "combination_id"),
-            inverseJoinColumns = @JoinColumn(name = "subject_id")
+            name = "required_subject", // Updated to match the database table
+            joinColumns = @JoinColumn(name = "combination_id"), // Matches `required_subject.combination_id`
+            inverseJoinColumns = @JoinColumn(name = "subject_id") // Matches `required_subject.subject_id`
     )
     private List<Subject> subjects;
 }

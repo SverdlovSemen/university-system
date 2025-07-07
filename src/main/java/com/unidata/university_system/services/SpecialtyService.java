@@ -42,7 +42,7 @@ public class SpecialtyService {
         Optional<Specialty> existingSpecialty = specialtyRepository.findById(id);
         if (existingSpecialty.isPresent()) {
             Specialty updatedSpecialty = specialtyMapper.toSpecialty(request);
-            updatedSpecialty.setId(id); // Ensure ID is preserved
+            updatedSpecialty.setId(id);
             Specialty savedSpecialty = specialtyRepository.save(updatedSpecialty);
             return Optional.of(specialtyMapper.fromSpecialty(savedSpecialty));
         }

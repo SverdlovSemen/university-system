@@ -19,19 +19,16 @@ public class FacultyMapper {
     private SpecialtyMapper specialtyMapper;
 
     @Autowired
-    private UniversityRepository universityRepository; // Use repository instead of service
+    private UniversityRepository universityRepository;
 
     public Faculty toFaculty(FacultyRequest request) {
         if (request == null) return null;
         Faculty faculty = new Faculty();
         faculty.setId(request.id());
         faculty.setName(request.name());
-        faculty.setUniversity(universityRepository.findById(request.universityId())
-                .orElseThrow(() -> new IllegalArgumentException("University not found with ID: " + request.universityId())));
-        faculty.setSpecialties(request.specialties() != null ?
-                request.specialties().stream()
-                        .map(specialtyMapper::toSpecialty)
-                        .collect(Collectors.toList()) : Collections.emptyList());
+        University university = universityRepository.findById(request.universityId())
+                .orElseThrow(() -> new IllegalArgumentException("University not found with ID: " + request.universityId()));
+        faculty.setUniversity(university);
         return faculty;
     }
 
@@ -40,7 +37,7 @@ public class FacultyMapper {
         return new FacultyResponse(
                 faculty.getId(),
                 faculty.getName(),
-                null, // Prevent recursion
+                faculty.getUniversity().getId(),
                 faculty.getSpecialties() != null ?
                         faculty.getSpecialties().stream()
                                 .map(specialtyMapper::fromSpecialty)

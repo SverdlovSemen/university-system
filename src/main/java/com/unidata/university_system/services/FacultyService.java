@@ -4,9 +4,7 @@ import com.unidata.university_system.dto.FacultyRequest;
 import com.unidata.university_system.dto.FacultyResponse;
 import com.unidata.university_system.mapper.FacultyMapper;
 import com.unidata.university_system.models.Faculty;
-import com.unidata.university_system.models.University;
 import com.unidata.university_system.repositories.FacultyRepository;
-import com.unidata.university_system.repositories.UniversityRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,9 +17,6 @@ public class FacultyService {
 
     @Autowired
     private FacultyRepository facultyRepository;
-
-    @Autowired
-    private UniversityRepository universityRepository;
 
     @Autowired
     private FacultyMapper facultyMapper;
@@ -39,7 +34,6 @@ public class FacultyService {
 
     public FacultyResponse createFaculty(FacultyRequest request) {
         Faculty faculty = facultyMapper.toFaculty(request);
-        // University is set in FacultyMapper using universityId
         Faculty savedFaculty = facultyRepository.save(faculty);
         return facultyMapper.fromFaculty(savedFaculty);
     }
@@ -48,7 +42,7 @@ public class FacultyService {
         Optional<Faculty> existingFaculty = facultyRepository.findById(id);
         if (existingFaculty.isPresent()) {
             Faculty updatedFaculty = facultyMapper.toFaculty(request);
-            updatedFaculty.setId(id); // Ensure ID is preserved
+            updatedFaculty.setId(id);
             Faculty savedFaculty = facultyRepository.save(updatedFaculty);
             return Optional.of(facultyMapper.fromFaculty(savedFaculty));
         }

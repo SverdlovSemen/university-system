@@ -2,7 +2,9 @@ package com.unidata.university_system.mapper;
 
 import com.unidata.university_system.dto.SpecialtyRequest;
 import com.unidata.university_system.dto.SpecialtyResponse;
+import com.unidata.university_system.models.Faculty;
 import com.unidata.university_system.models.Specialty;
+import com.unidata.university_system.repositories.FacultyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,9 @@ public class SpecialtyMapper {
     @Autowired
     private SubjectCombinationMapper subjectCombinationMapper;
 
+    @Autowired
+    private FacultyRepository facultyRepository;
+
     public Specialty toSpecialty(SpecialtyRequest request) {
         if (request == null) return null;
         Specialty specialty = new Specialty();
@@ -23,7 +28,9 @@ public class SpecialtyMapper {
         specialty.setName(request.name());
         specialty.setProgramCode(request.programCode());
         specialty.setDescription(request.description());
-        // Не маппим faculty, чтобы избежать рекурсии при создании
+        Faculty faculty = facultyRepository.findById(request.facultyId())
+                .orElseThrow(() -> new IllegalArgumentException("Faculty not found with ID: " + request.facultyId()));
+        specialty.setFaculty(faculty);
         specialty.setSubjectCombinations(request.subjectCombinations() != null ?
                 request.subjectCombinations().stream()
                         .map(subjectCombinationMapper::toSubjectCombination)
@@ -38,7 +45,7 @@ public class SpecialtyMapper {
                 specialty.getName(),
                 specialty.getProgramCode(),
                 specialty.getDescription(),
-                null, // Избегаем рекурсии, не включаем faculty
+                specialty.getFaculty().getId(),
                 specialty.getSubjectCombinations() != null ?
                         specialty.getSubjectCombinations().stream()
                                 .map(subjectCombinationMapper::fromSubjectCombination)

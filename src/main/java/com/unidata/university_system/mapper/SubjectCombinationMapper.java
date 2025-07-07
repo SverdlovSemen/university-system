@@ -2,7 +2,9 @@ package com.unidata.university_system.mapper;
 
 import com.unidata.university_system.dto.SubjectCombinationRequest;
 import com.unidata.university_system.dto.SubjectCombinationResponse;
+import com.unidata.university_system.models.Specialty;
 import com.unidata.university_system.models.SubjectCombination;
+import com.unidata.university_system.repositories.SpecialtyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,11 +18,16 @@ public class SubjectCombinationMapper {
     @Autowired
     private SubjectMapper subjectMapper;
 
+    @Autowired
+    private SpecialtyRepository specialtyRepository;
+
     public SubjectCombination toSubjectCombination(SubjectCombinationRequest request) {
         if (request == null) return null;
         SubjectCombination combination = new SubjectCombination();
         combination.setId(request.id());
-        // Не маппим specialty, чтобы избежать рекурсии при создании
+        Specialty specialty = specialtyRepository.findById(request.specialtyId())
+                .orElseThrow(() -> new IllegalArgumentException("Specialty not found with ID: " + request.specialtyId()));
+        combination.setSpecialty(specialty);
         combination.setSubjects(request.subjects() != null ?
                 request.subjects().stream()
                         .map(subjectMapper::toSubject)
@@ -32,7 +39,7 @@ public class SubjectCombinationMapper {
         if (combination == null) return null;
         return new SubjectCombinationResponse(
                 combination.getId(),
-                null, // Избегаем рекурсии, не включаем specialty
+                combination.getSpecialty().getId(),
                 combination.getSubjects() != null ?
                         combination.getSubjects().stream()
                                 .map(subjectMapper::fromSubject)

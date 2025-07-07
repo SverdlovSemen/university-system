@@ -8,8 +8,8 @@ import java.util.List;
 public record SubjectCombinationRequest(
         @NotNull(message = "SubjectCombination ID must be provided")
         Long id,
-        @NotNull(message = "Specialty must be provided")
-        SpecialtyRequest specialty,
+        @NotNull(message = "Specialty ID must be provided")
+        Long specialtyId, // Заменили SpecialtyRequest на Long
         @NotEmpty(message = "At least one subject must be provided")
         List<SubjectRequest> subjects
 ) {

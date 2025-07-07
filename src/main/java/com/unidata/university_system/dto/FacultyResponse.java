@@ -5,7 +5,7 @@ import java.util.List;
 public record FacultyResponse(
         Long id,
         String name,
-        UniversityResponse university, // Will be null
+        Long universityId, // Изменили с UniversityResponse на Long, чтобы избежать рекурсии
         List<SpecialtyResponse> specialties
 ) {
 }

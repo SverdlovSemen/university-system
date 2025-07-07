@@ -28,10 +28,6 @@ public class UniversityMapper {
         university.setAvgEgeScore(request.avgEgeScore());
         university.setCountryRanking(request.countryRanking());
         university.setCity(cityMapper.toCity(request.city()));
-        university.setFaculties(request.faculties() != null ?
-                request.faculties().stream()
-                        .map(facultyMapper::toFaculty)
-                        .collect(Collectors.toList()) : Collections.emptyList());
         return university;
     }
 
@@ -45,9 +41,7 @@ public class UniversityMapper {
                 university.getCountryRanking(),
                 cityMapper.fromCity(university.getCity()),
                 university.getFaculties() != null ?
-                        university.getFaculties().stream()
-                                .map(facultyMapper::fromFaculty)
-                                .collect(Collectors.toList()) : null
+                        facultyMapper.fromFacultyList(university.getFaculties()) : null
         );
     }
 

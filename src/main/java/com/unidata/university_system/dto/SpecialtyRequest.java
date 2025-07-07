@@ -13,8 +13,8 @@ public record SpecialtyRequest(
         @NotBlank(message = "Program code must not be empty")
         String programCode,
         String description,
-        @NotNull(message = "Faculty must be provided")
-        FacultyRequest faculty,
+        @NotNull(message = "Faculty ID must be provided")
+        Long facultyId, // Заменили String faculty на Long facultyId
         List<SubjectCombinationRequest> subjectCombinations
 ) {
 }

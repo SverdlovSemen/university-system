@@ -14,19 +14,18 @@ public class Specialty {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false)
+    @Column(nullable = false)
     private String name;
 
-    @Column(name = "program_code", nullable = false)
+    @Column(nullable = false)
     private String programCode;
 
-    @Column(name = "description")
     private String description;
 
     @ManyToOne
     @JoinColumn(name = "faculty_id", nullable = false)
     private Faculty faculty;
 
-    @OneToMany(mappedBy = "specialty", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "specialty", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SubjectCombination> subjectCombinations;
 }

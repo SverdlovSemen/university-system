@@ -18,7 +18,6 @@ public record UniversityRequest(
         @Positive(message = "Country ranking must be positive")
         Integer countryRanking,
         @NotNull(message = "City must be provided")
-        CityRequest city,
-        List<FacultyRequest> faculties
+        CityRequest city
 ) {
 }
