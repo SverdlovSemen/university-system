@@ -2,10 +2,12 @@ package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.UniversityRequest;
 import com.unidata.university_system.dto.UniversityResponse;
+import com.unidata.university_system.models.University;
 import com.unidata.university_system.services.UniversityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -64,5 +66,15 @@ public class UniversityController {
     @GetMapping("/analytics/by-region")
     public List<Object[]> getUniversitiesByRegion() {
         return universityService.getUniversitiesByRegion();
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<List<University>> importUniversities(@RequestParam("file") MultipartFile file) {
+        try {
+            List<University> universities = universityService.importUniversities(file);
+            return ResponseEntity.ok(universities);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 }

@@ -1,13 +1,24 @@
 package com.unidata.university_system.services;
 
+import com.opencsv.bean.CsvToBean;
+import com.opencsv.bean.CsvToBeanBuilder;
 import com.unidata.university_system.dto.SpecialtyRequest;
 import com.unidata.university_system.dto.SpecialtyResponse;
+import com.unidata.university_system.dto.csv.SpecialtyCsvDTO;
 import com.unidata.university_system.mapper.SpecialtyMapper;
+import com.unidata.university_system.models.Faculty;
 import com.unidata.university_system.models.Specialty;
+import com.unidata.university_system.repositories.FacultyRepository;
 import com.unidata.university_system.repositories.SpecialtyRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -17,6 +28,9 @@ public class SpecialtyService {
 
     @Autowired
     private SpecialtyRepository specialtyRepository;
+
+    @Autowired
+    private FacultyRepository facultyRepository;
 
     @Autowired
     private SpecialtyMapper specialtyMapper;
@@ -73,5 +87,37 @@ public class SpecialtyService {
         return specialtyRepository.searchSpecialties(universityId, level, form, subject).stream()
                 .map(specialtyMapper::fromSpecialty)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<Specialty> importSpecialties(MultipartFile file) throws Exception {
+        List<Specialty> savedSpecialties = new ArrayList<>();
+        try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+            CsvToBean<SpecialtyCsvDTO> csvToBean = new CsvToBeanBuilder<SpecialtyCsvDTO>(reader)
+                    .withType(SpecialtyCsvDTO.class)
+                    .withIgnoreLeadingWhiteSpace(true)
+                    .build();
+
+            for (SpecialtyCsvDTO dto : csvToBean) {
+                Faculty faculty = facultyRepository.findById(dto.getFacultyId())
+                        .orElseThrow(() -> new IllegalArgumentException("Faculty with ID " + dto.getFacultyId() + " not found"));
+
+                Specialty specialty;
+                if (dto.getId() == null) {
+                    specialty = new Specialty();
+                } else {
+                    specialty = specialtyRepository.findById(dto.getId())
+                            .orElseThrow(() -> new IllegalArgumentException("Specialty with ID " + dto.getId() + " not found"));
+                }
+                specialty.setName(dto.getName());
+                specialty.setProgramCode(dto.getProgramCode());
+                specialty.setDescription(dto.getDescription());
+                specialty.setFaculty(faculty);
+                savedSpecialties.add(specialtyRepository.save(specialty));
+            }
+        } catch (Exception e) {
+            throw new Exception("Failed to process specialties CSV: " + e.getMessage(), e);
+        }
+        return savedSpecialties;
     }
 }

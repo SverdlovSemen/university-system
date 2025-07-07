@@ -45,6 +45,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.junit.jupiter:junit-jupiter-api")
 	testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+	implementation("com.opencsv:opencsv:5.11.2")
 }
 
 tasks.withType<Test> {

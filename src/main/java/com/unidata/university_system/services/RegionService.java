@@ -1,13 +1,22 @@
 package com.unidata.university_system.services;
 
+import com.opencsv.bean.CsvToBean;
+import com.opencsv.bean.CsvToBeanBuilder;
 import com.unidata.university_system.dto.RegionRequest;
 import com.unidata.university_system.dto.RegionResponse;
+import com.unidata.university_system.dto.csv.RegionCsvDTO;
 import com.unidata.university_system.mapper.RegionMapper;
 import com.unidata.university_system.models.Region;
 import com.unidata.university_system.repositories.RegionRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -55,5 +64,31 @@ public class RegionService {
             return true;
         }
         return false;
+    }
+
+    @Transactional
+    public List<Region> importRegions(MultipartFile file) throws Exception {
+        List<Region> savedRegions = new ArrayList<>();
+        try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+            CsvToBean<RegionCsvDTO> csvToBean = new CsvToBeanBuilder<RegionCsvDTO>(reader)
+                    .withType(RegionCsvDTO.class)
+                    .withIgnoreLeadingWhiteSpace(true)
+                    .build();
+
+            for (RegionCsvDTO dto : csvToBean) {
+                Region region;
+                if (dto.getId() == null) {
+                    region = new Region();
+                } else {
+                    region = regionRepository.findById(dto.getId())
+                            .orElseThrow(() -> new IllegalArgumentException("Region with ID " + dto.getId() + " not found"));
+                }
+                region.setName(dto.getName());
+                savedRegions.add(regionRepository.save(region));
+            }
+        } catch (Exception e) {
+            throw new Exception("Failed to process regions CSV: " + e.getMessage(), e);
+        }
+        return savedRegions;
     }
 }

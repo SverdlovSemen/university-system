@@ -2,12 +2,14 @@ package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.FacultyRequest;
 import com.unidata.university_system.dto.FacultyResponse;
+import com.unidata.university_system.models.Faculty;
 import com.unidata.university_system.services.FacultyService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -44,5 +46,15 @@ public class FacultyController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<List<Faculty>> importFaculties(@RequestParam("file") MultipartFile file) {
+        try {
+            List<Faculty> faculties = facultyService.importFaculties(file);
+            return ResponseEntity.ok(faculties);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 }

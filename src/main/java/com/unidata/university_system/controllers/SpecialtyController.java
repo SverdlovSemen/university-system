@@ -2,12 +2,14 @@ package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.SpecialtyRequest;
 import com.unidata.university_system.dto.SpecialtyResponse;
+import com.unidata.university_system.models.Specialty;
 import com.unidata.university_system.services.SpecialtyService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -58,5 +60,15 @@ public class SpecialtyController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<List<Specialty>> importSpecialties(@RequestParam("file") MultipartFile file) {
+        try {
+            List<Specialty> specialties = specialtyService.importSpecialties(file);
+            return ResponseEntity.ok(specialties);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 }

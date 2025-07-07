@@ -2,12 +2,14 @@ package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.SubjectRequest;
 import com.unidata.university_system.dto.SubjectResponse;
+import com.unidata.university_system.models.Subject;
 import com.unidata.university_system.services.SubjectService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -51,5 +53,15 @@ public class SubjectController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<List<Subject>> importSubjects(@RequestParam("file") MultipartFile file) {
+        try {
+            List<Subject> subjects = subjectService.importSubjects(file);
+            return ResponseEntity.ok(subjects);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 }

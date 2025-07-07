@@ -2,10 +2,12 @@ package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.RegionRequest;
 import com.unidata.university_system.dto.RegionResponse;
+import com.unidata.university_system.models.Region;
 import com.unidata.university_system.services.RegionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -46,5 +48,15 @@ public class RegionController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<List<Region>> importRegions(@RequestParam("file") MultipartFile file) {
+        try {
+            List<Region> regions = regionService.importRegions(file);
+            return ResponseEntity.ok(regions);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 }
