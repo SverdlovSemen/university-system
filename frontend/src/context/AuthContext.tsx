@@ -16,23 +16,20 @@ interface AuthContextType {
     logout: () => void;
     isAuthenticated: boolean;
     loading: boolean;
+    hasRole: (role: string) => boolean; // Добавлено
 }
 
-// Создаем контекст с начальным значением null
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-// Провайдер контекста
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
 
-    // Проверка аутентификации при загрузке
     useEffect(() => {
         const verifyAuth = async () => {
             if (token) {
                 try {
-                    // Запрос для проверки токена
                     const response = await axios.get('/api/auth/me', {
                         headers: { Authorization: `Bearer ${token}` }
                     });
@@ -48,19 +45,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         verifyAuth();
     }, [token]);
 
-    // Функция входа
     const login = useCallback(async (username: string, password: string) => {
         try {
             const response = await axios.post('/api/auth/login', { username, password });
+            const token = response.data.token;
 
-            // Извлекаем токен из ответа
-            const { token } = response.data;
-
-            // Сохраняем токен в localStorage и состоянии
             localStorage.setItem('token', token);
             setToken(token);
 
-            // Получаем данные пользователя
             const userResponse = await axios.get('/api/auth/me', {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -72,11 +64,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
-    // Функция регистрации
     const register = useCallback(async (username: string, password: string) => {
         try {
             await axios.post('/api/auth/register', { username, password });
-            // После регистрации автоматически входим
             await login(username, password);
         } catch (error) {
             console.error('Registration failed', error);
@@ -84,18 +74,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [login]);
 
-    // Функция выхода
     const logout = useCallback(() => {
         localStorage.removeItem('token');
         setToken(null);
         setUser(null);
-        // Здесь можно добавить вызов API для выхода
     }, []);
 
-    // Проверка аутентификации
     const isAuthenticated = !!user;
 
-    // Значение контекста
+    // Новая функция для проверки ролей
+    const hasRole = useCallback((requiredRole: string): boolean => {
+        return user?.roles?.includes(requiredRole) ?? false;
+    }, [user]);
+
     const contextValue = {
         user,
         token,
@@ -103,7 +94,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         register,
         logout,
         isAuthenticated,
-        loading
+        loading,
+        hasRole // Добавлено
     };
 
     return (

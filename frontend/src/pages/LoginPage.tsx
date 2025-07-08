@@ -16,6 +16,7 @@ const LoginPage = () => {
 
         try {
             await login(username, password);
+            // Перенаправляем на главную страницу (SearchPage)
             navigate('/');
         } catch (err) {
             setError('Неверное имя пользователя или пароль');
