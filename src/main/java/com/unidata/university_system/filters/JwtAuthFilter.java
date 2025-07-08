@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,12 +18,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Component // Регестрируем фильтр как Spring bean
-@RequiredArgsConstructor // Генерируем конструктор для final полей
+@Slf4j
+@Component
+@RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+
 
     @Override
     protected void doFilterInternal(
@@ -31,49 +34,42 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // 1. Получаем заголовок Authorization
+        log.debug("Processing request: {}", request.getRequestURI()); // Логируем запрос
+
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String username;
 
-        // 2. Проверяем наличие и формат заголовка
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            // Если токена нет - пропускаем запрос дальше
+            log.debug("No JWT token found in request headers");
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 3. Извлекаем JWT из заголовка (убираем "Bearer ")
         jwt = authHeader.substring(7);
-
-        // 4. Извлекаем имя пользователя из токена
         username = jwtService.extractUsername(jwt);
+        log.debug("Extracted username from JWT: {}", username);
 
-        // 5. Если username извлечен и пользователь еще не аутентифицирован
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            // 6. Загружаем данные пользователя из базы
+            log.debug("Loading user details for: {}", username);
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-            // 7. Проверяем валидность токена
             if (jwtService.isTokenValid(jwt, userDetails)) {
-                // 8. Создаем объект аутентификации
+                log.info("User authenticated: {}", username);
+
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
-                        null, // credentials не нужны, так как токен уже подтвержден
+                        null,
                         userDetails.getAuthorities()
                 );
 
-                // 9. Добавляем детали запроса (IP, сессия и т.д.)
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-
-                // 10. Устанавливаем аутентификацию в контекст безопасности
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+            } else {
+                log.warn("Invalid JWT token for user: {}", username);
             }
         }
 
-        // 11. Продолжаем цепочку фильтров
         filterChain.doFilter(request, response);
     }
 }

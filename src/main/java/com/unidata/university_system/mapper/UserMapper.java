@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,8 +38,10 @@ public class UserMapper {
                 user.isEnabled(),
                 user.getRoles() != null ?
                         user.getRoles().stream()
-                                .map(roleMapper::fromRole)
-                                .collect(Collectors.toSet()) : null
+                                // ИЗМЕНЕНИЕ ЗДЕСЬ: преобразуем в Set<String> вместо Set<RoleResponse>
+                                .map(role -> role.getRoleName()) // Просто получаем имя роли
+                                .collect(Collectors.toSet()) :
+                        Collections.emptySet() // Возвращаем пустой Set вместо null
         );
     }
 

@@ -4,39 +4,42 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.interfaces.DecodedJWT;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
 
-    // Секретный ключ из application.properties
     @Value("${jwt.secret}")
     private String secretKey;
 
-    // Время жизни токена (в миллисекундах)
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
-    // Алгоритм подписи
     private Algorithm getSigningAlgorithm() {
         return Algorithm.HMAC256(secretKey.getBytes());
     }
 
-    // Генерация JWT токена
     public String generateToken(UserDetails userDetails) {
+        // Извлекаем роли в виде списка строк
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
+
         return JWT.create()
-                .withSubject(userDetails.getUsername()) // Идентификатор пользователя
-                .withIssuedAt(new Date()) // Время создания
-                .withExpiresAt(new Date(System.currentTimeMillis() + jwtExpirationMs)) // Время истечения
-                .sign(getSigningAlgorithm()); // Подпись
+                .withSubject(userDetails.getUsername())
+                .withClaim("roles", roles) // Добавляем роли в токен
+                .withIssuedAt(new Date())
+                .withExpiresAt(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .sign(getSigningAlgorithm());
     }
 
-    // Проверка токена
     public boolean isTokenValid(String token, UserDetails userDetails) {
         try {
             final String username = extractUsername(token);
@@ -46,17 +49,14 @@ public class JwtService {
         }
     }
 
-    // Извлечение имени пользователя из токена
     public String extractUsername(String token) {
         return getJWTVerifier().verify(token).getSubject();
     }
 
-    // Проверка истечения срока действия токена
     private boolean isTokenExpired(String token) {
         return getJWTVerifier().verify(token).getExpiresAt().before(new Date());
     }
 
-    // Создание верификатора токена
     private JWTVerifier getJWTVerifier() {
         return JWT.require(getSigningAlgorithm()).build();
     }

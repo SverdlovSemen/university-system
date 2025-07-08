@@ -37,6 +37,19 @@ public class User implements UserDetails {
     )
     private Set<Role> roles = new HashSet<>();
 
+    // Добавлен toString() для удобства логирования
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", username='" + username + '\'' +
+                ", enabled=" + enabled +
+                ", roles=" + roles.stream()
+                .map(Role::getRoleName)
+                .collect(Collectors.joining(", ")) +
+                '}';
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
