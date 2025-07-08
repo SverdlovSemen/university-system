@@ -5,6 +5,7 @@ import com.unidata.university_system.dto.RegionResponse;
 import com.unidata.university_system.models.Region;
 import com.unidata.university_system.services.RegionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,7 +51,7 @@ public class RegionController {
         return ResponseEntity.notFound().build();
     }
 
-    @PostMapping("/import")
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<List<Region>> importRegions(@RequestParam("file") MultipartFile file) {
         try {
             List<Region> regions = regionService.importRegions(file);
