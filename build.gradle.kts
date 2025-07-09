@@ -46,6 +46,7 @@ dependencies {
 	testImplementation("org.junit.jupiter:junit-jupiter-api")
 	testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 	implementation("com.opencsv:opencsv:5.11.2")
+	implementation("commons-io:commons-io:2.19.0")
 }
 
 tasks.withType<Test> {

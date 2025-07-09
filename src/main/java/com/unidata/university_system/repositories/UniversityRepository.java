@@ -7,11 +7,15 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface UniversityRepository extends JpaRepository<University, Long> {
     // Поиск по названию (частичное совпадение, регистр не важен)
     List<University> findByNameContainingIgnoreCase(String name);
+
+    // Поиск по названию и ID города (регистр не важен)
+    Optional<University> findByNameIgnoreCaseAndCityId(String name, Long cityId);
 
     // Фильтрация по региону
     @Query("SELECT u FROM University u WHERE u.city.region.name = :regionName")

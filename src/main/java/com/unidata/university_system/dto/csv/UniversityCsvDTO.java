@@ -7,21 +7,18 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UniversityCsvDTO {
-    @CsvBindByName(column = "id")
-    private Long id;
-
     @CsvBindByName(column = "name", required = true)
     private String name;
 
     @CsvBindByName(column = "type", required = true)
     private String type;
 
-    @CsvBindByName(column = "avg_ege_score")
+    @CsvBindByName(column = "avgEgeScore")
     private Double avgEgeScore;
 
-    @CsvBindByName(column = "country_ranking")
+    @CsvBindByName(column = "countryRanking")
     private Integer countryRanking;
 
-    @CsvBindByName(column = "city_id", required = true)
-    private Long cityId;
+    @CsvBindByName(column = "city_name", required = true)
+    private String cityName;
 }

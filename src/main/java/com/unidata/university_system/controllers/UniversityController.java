@@ -5,6 +5,7 @@ import com.unidata.university_system.dto.UniversityResponse;
 import com.unidata.university_system.models.University;
 import com.unidata.university_system.services.UniversityService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -68,13 +69,10 @@ public class UniversityController {
         return universityService.getUniversitiesByRegion();
     }
 
-    @PostMapping("/import")
-    public ResponseEntity<List<University>> importUniversities(@RequestParam("file") MultipartFile file) {
-        try {
-            List<University> universities = universityService.importUniversities(file);
-            return ResponseEntity.ok(universities);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(null);
-        }
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<UniversityResponse>> importUniversities(@RequestParam("file") MultipartFile file,
+                                                                       @RequestParam("mode") String mode) throws Exception {
+        List<UniversityResponse> universities = universityService.importUniversities(file, mode);
+        return ResponseEntity.ok(universities);
     }
 }

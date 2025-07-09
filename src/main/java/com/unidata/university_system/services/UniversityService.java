@@ -11,6 +11,8 @@ import com.unidata.university_system.models.University;
 import com.unidata.university_system.repositories.CityRepository;
 import com.unidata.university_system.repositories.UniversityRepository;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.input.BOMInputStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,11 +20,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class UniversityService {
 
@@ -86,35 +90,62 @@ public class UniversityService {
     }
 
     @Transactional
-    public List<University> importUniversities(MultipartFile file) throws Exception {
+    public List<UniversityResponse> importUniversities(MultipartFile file, String mode) throws Exception {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("CSV file is missing or empty");
+        }
+
+        if (!"ADD".equalsIgnoreCase(mode) && !"REPLACE".equalsIgnoreCase(mode)) {
+            throw new IllegalArgumentException("Invalid import mode: " + mode + ". Use ADD or REPLACE.");
+        }
+
         List<University> savedUniversities = new ArrayList<>();
-        try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+
+        try (Reader reader = new InputStreamReader(new BOMInputStream(file.getInputStream()), StandardCharsets.UTF_8)) {
             CsvToBean<UniversityCsvDTO> csvToBean = new CsvToBeanBuilder<UniversityCsvDTO>(reader)
                     .withType(UniversityCsvDTO.class)
                     .withIgnoreLeadingWhiteSpace(true)
                     .build();
 
             for (UniversityCsvDTO dto : csvToBean) {
-                City city = cityRepository.findById(dto.getCityId())
-                        .orElseThrow(() -> new IllegalArgumentException("City with ID " + dto.getCityId() + " not found"));
+                String name = dto.getName() != null ? dto.getName().trim() : null;
+                String type = dto.getType() != null ? dto.getType().trim() : null;
+                String cityName = dto.getCityName() != null ? dto.getCityName().trim() : null;
 
-                University university;
-                if (dto.getId() == null) {
-                    university = new University();
-                } else {
-                    university = universityRepository.findById(dto.getId())
-                            .orElseThrow(() -> new IllegalArgumentException("University with ID " + dto.getId() + " not found"));
+                if (name == null || name.isEmpty() || type == null || type.isEmpty() || cityName == null || cityName.isEmpty()) {
+                    throw new IllegalArgumentException("University name, type, or city_name is missing in CSV");
                 }
-                university.setName(dto.getName());
-                university.setType(dto.getType());
-                university.setAvgEgeScore(dto.getAvgEgeScore());
-                university.setCountryRanking(dto.getCountryRanking());
-                university.setCity(city);
-                savedUniversities.add(universityRepository.save(university));
+
+                City city = cityRepository.findByNameIgnoreCase(cityName)
+                        .orElseThrow(() -> new IllegalArgumentException("City not found: " + cityName));
+
+                Optional<University> existing = universityRepository.findByNameIgnoreCaseAndCityId(name, city.getId());
+
+                if ("ADD".equalsIgnoreCase(mode)) {
+                    if (existing.isEmpty()) {
+                        University newUniversity = new University();
+                        newUniversity.setName(name);
+                        newUniversity.setType(type);
+                        newUniversity.setAvgEgeScore(dto.getAvgEgeScore());
+                        newUniversity.setCountryRanking(dto.getCountryRanking());
+                        newUniversity.setCity(city);
+                        savedUniversities.add(universityRepository.save(newUniversity));
+                    }
+                } else {
+                    University university = existing.orElseGet(University::new);
+                    university.setName(name);
+                    university.setType(type);
+                    university.setAvgEgeScore(dto.getAvgEgeScore());
+                    university.setCountryRanking(dto.getCountryRanking());
+                    university.setCity(city);
+                    savedUniversities.add(universityRepository.save(university));
+                }
             }
         } catch (Exception e) {
+            log.error("Failed to process universities CSV: {}", e.getMessage(), e);
             throw new Exception("Failed to process universities CSV: " + e.getMessage(), e);
         }
-        return savedUniversities;
+
+        return universityMapper.fromUniversityList(savedUniversities);
     }
 }
