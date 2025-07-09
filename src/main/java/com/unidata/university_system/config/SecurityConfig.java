@@ -86,6 +86,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/regions").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/regions/{id}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/regions/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/regions/import").hasRole("ADMIN")
 
                         // All other requests require authentication
                         .anyRequest().authenticated()
