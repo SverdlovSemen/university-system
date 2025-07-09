@@ -53,10 +53,11 @@ public class UniversityController {
 
     @GetMapping("/search")
     public List<UniversityResponse> searchUniversities(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String region,
-            @RequestParam(required = false) String type) {
-        return universityService.searchUniversities(name, region, type);
+            @RequestParam(required = false) Long regionId,
+            @RequestParam(required = false) List<Long> subjectIds,
+            @RequestParam(required = false) Double minScore,
+            @RequestParam(required = false) Double maxScore) {
+        return universityService.searchUniversities(regionId, subjectIds, minScore, maxScore);
     }
 
     @GetMapping("/analytics/count")
@@ -67,6 +68,11 @@ public class UniversityController {
     @GetMapping("/analytics/by-region")
     public List<Object[]> getUniversitiesByRegion() {
         return universityService.getUniversitiesByRegion();
+    }
+
+    @GetMapping("/by-specialty/{specialtyId}")
+    public List<UniversityResponse> getUniversitiesBySpecialty(@PathVariable Long specialtyId) {
+        return universityService.getUniversitiesBySpecialty(specialtyId);
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

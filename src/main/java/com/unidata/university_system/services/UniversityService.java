@@ -6,10 +6,13 @@ import com.unidata.university_system.dto.UniversityRequest;
 import com.unidata.university_system.dto.UniversityResponse;
 import com.unidata.university_system.dto.csv.UniversityCsvDTO;
 import com.unidata.university_system.mapper.UniversityMapper;
-import com.unidata.university_system.models.City;
-import com.unidata.university_system.models.University;
+import com.unidata.university_system.models.*;
 import com.unidata.university_system.repositories.CityRepository;
 import com.unidata.university_system.repositories.UniversityRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.*;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.input.BOMInputStream;
@@ -17,7 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -39,6 +41,11 @@ public class UniversityService {
     @Autowired
     private UniversityMapper universityMapper;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
+
+
     public List<UniversityResponse> getAllUniversities() {
         return universityRepository.findAll().stream()
                 .map(universityMapper::fromUniversity)
@@ -54,6 +61,31 @@ public class UniversityService {
         University university = universityMapper.toUniversity(request);
         University savedUniversity = universityRepository.save(university);
         return universityMapper.fromUniversity(savedUniversity);
+    }
+
+    public List<UniversityResponse> getUniversitiesBySpecialty(Long specialtyId) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<University> cq = cb.createQuery(University.class);
+        Root<University> universityRoot = cq.from(University.class);
+
+        // Создаем join для связи University → Faculty → Specialty
+        Join<University, Faculty> facultyJoin = universityRoot.join("faculties");
+        Join<Faculty, Specialty> specialtyJoin = facultyJoin.join("specialties");
+
+        // Условие поиска по ID специальности
+        Predicate specialtyPredicate = cb.equal(specialtyJoin.get("id"), specialtyId);
+
+        // Формируем запрос
+        cq.select(universityRoot)
+                .where(specialtyPredicate)
+                .distinct(true); // Убираем дубликаты университетов
+
+        // Выполняем запрос и преобразуем результат
+        return entityManager.createQuery(cq)
+                .getResultList()
+                .stream()
+                .map(universityMapper::fromUniversity)
+                .collect(Collectors.toList());
     }
 
     public Optional<UniversityResponse> updateUniversity(Long id, UniversityRequest request) {
@@ -75,8 +107,58 @@ public class UniversityService {
         return false;
     }
 
-    public List<UniversityResponse> searchUniversities(String name, String region, String type) {
-        return universityRepository.search(name, region, type).stream()
+    public List<UniversityResponse> searchUniversities(
+            Long regionId,
+            List<Long> subjectIds,
+            Double minScore,
+            Double maxScore) {
+
+
+        // Базовый запрос
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<University> cq = cb.createQuery(University.class);
+        Root<University> universityRoot = cq.from(University.class);
+
+        // Список условий
+        List<Predicate> predicates = new ArrayList<>();
+
+        // Фильтр по региону
+        if (regionId != null) {
+            Join<University, City> cityJoin = universityRoot.join("city");
+            Join<City, Region> regionJoin = cityJoin.join("region");
+            predicates.add(cb.equal(regionJoin.get("id"), regionId));
+        }
+
+        // Фильтр по предметам
+        if (subjectIds != null && !subjectIds.isEmpty()) {
+            Join<University, Faculty> facultyJoin = universityRoot.join("faculties");
+            Join<Faculty, Specialty> specialtyJoin = facultyJoin.join("specialties");
+            Join<Specialty, SubjectCombination> combinationJoin = specialtyJoin.join("subjectCombinations");
+            Join<SubjectCombination, Subject> subjectJoin = combinationJoin.join("requiredSubjects");
+
+            predicates.add(subjectJoin.get("id").in(subjectIds));
+        }
+
+        // Фильтр по баллу
+        if (minScore != null || maxScore != null) {
+            Path<Double> scorePath = universityRoot.get("avgEgeScore");
+
+            if (minScore != null && maxScore != null) {
+                predicates.add(cb.between(scorePath, minScore, maxScore));
+            } else if (minScore != null) {
+                predicates.add(cb.ge(scorePath, minScore));
+            } else {
+                predicates.add(cb.le(scorePath, maxScore));
+            }
+        }
+
+        // Собираем все условия
+        cq.where(predicates.toArray(new Predicate[0])).distinct(true);
+
+        // Выполняем запрос
+        TypedQuery<University> query = entityManager.createQuery(cq);
+        return query.getResultList().stream()
                 .map(universityMapper::fromUniversity)
                 .collect(Collectors.toList());
     }

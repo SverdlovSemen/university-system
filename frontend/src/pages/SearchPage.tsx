@@ -1,120 +1,162 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { Button, Card, Container, Row, Col } from 'react-bootstrap';
+import { Button, Card, Container, Row, Col, Form, Spinner } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
+import { fetchAllRegions } from '../api/regionApi';
+import { fetchUniversities } from '../api/universityApi';
+import {
+    UniversityResponse,
+    SubjectResponse,
+    RegionResponse
+} from '../types';
+import UniversityCard from '../components/UniversityCard';
 
 const SearchPage = () => {
     const { user, isAuthenticated, hasRole } = useAuth();
     const navigate = useNavigate();
 
+    const [regions, setRegions] = useState<RegionResponse[]>([]);
+    const [subjects, setSubjects] = useState<SubjectResponse[]>([]);
+    const [searchResults, setSearchResults] = useState<UniversityResponse[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
+    const [minScore, setMinScore] = useState<number | null>(null);
+    const [maxScore, setMaxScore] = useState<number | null>(null);
+    useEffect(() => {
+        const loadInitialData = async () => {
+            setIsLoading(true);
+            try {
+                const regionsData = await fetchAllRegions();
+
+                setRegions(regionsData);
+
+            } catch (error) {
+                console.error('Ошибка загрузки данных', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadInitialData();
+    }, []);
+
+    const handleSearch = async () => {
+        setIsLoading(true);
+        try {
+            const regionParam = selectedRegion !== null ? selectedRegion : undefined;
+            const minScoreParam = minScore !== null ? minScore : undefined;
+            const maxScoreParam = maxScore !== null ? maxScore : undefined; // Добавляем
+
+            console.log("Search parameters:", {
+                regionId: regionParam,
+                minScore: minScoreParam,
+                maxScore: maxScoreParam  // Добавляем в логи
+            });
+
+            const results = await fetchUniversities(
+                regionParam,
+                undefined,
+                minScoreParam,
+                maxScoreParam  // Добавляем
+            );
+
+            console.log("Search results:", results);
+            setSearchResults(results);
+        } catch (error) {
+            console.error('Ошибка поиска', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <Container className="mt-4">
-            <Card className="mb-4">
-                <Card.Header as="h5">Поиск университетов</Card.Header>
-                <Card.Body>
-                    <Card.Title>Найдите идеальный университет</Card.Title>
-                    <Card.Text>
-                        Используйте наши фильтры, чтобы найти университет, соответствующий вашим требованиям.
-                    </Card.Text>
 
-                    {/* Блок фильтров поиска */}
-                    <div className="mb-4 p-3 border rounded">
-                        <h6>Фильтры поиска</h6>
-                        <Row>
-                            <Col md={4}>
-                                <div className="mb-3">
-                                    <label className="form-label">Регион</label>
-                                    <select className="form-select">
-                                        <option>Любой регион</option>
-                                        <option>Москва</option>
-                                        <option>Санкт-Петербург</option>
-                                        {/* Другие регионы */}
-                                    </select>
-                                </div>
-                            </Col>
-                            <Col md={4}>
-                                <div className="mb-3">
-                                    <label className="form-label">Специальность</label>
-                                    <select className="form-select">
-                                        <option>Любая специальность</option>
-                                        <option>Информационные технологии</option>
-                                        <option>Экономика</option>
-                                        {/* Другие специальности */}
-                                    </select>
-                                </div>
-                            </Col>
-                            <Col md={4}>
-                                <div className="mb-3">
-                                    <label className="form-label">Минимальный балл ЕГЭ</label>
-                                    <input type="number" className="form-control" min="0" max="100" />
-                                </div>
-                            </Col>
-                        </Row>
-                        <Button variant="primary">Поиск</Button>
-                    </div>
+            {/* Обновлённый блок фильтров */}
+            <div className="mb-4 p-3 border rounded">
+                <h6>Фильтры поиска</h6>
+                <Row>
+                    {/* Колонка для региона - теперь занимает 6 колонок */}
+                    <Col md={6}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Регион</Form.Label>
+                            <Form.Select
+                                value={selectedRegion || ''}
+                                onChange={(e) => setSelectedRegion(e.target.value ? Number(e.target.value) : null)}
+                            >
+                                <option value="">Любой регион</option>
+                                {regions.map(region => (
+                                    <option key={region.id} value={region.id}>{region.name}</option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+                    </Col>
 
-                    {/* Блок для зарегистрированных пользователей */}
-                    {isAuthenticated && (
-                        <div className="mt-4 p-3 border rounded bg-light">
-                            <h5>Расширенные возможности</h5>
-                            <p>Как зарегистрированный пользователь, вы можете:</p>
-                            <ul>
-                                <li>Сохранять понравившиеся университеты</li>
-                                <li>Сравнивать университеты</li>
-                                <li>Получать персональные рекомендации</li>
-                                {hasRole('ROLE_ADMIN') && (
-                                    <li>
-                                        <Link to="/admin">Управлять системой (админ)</Link>
-                                    </li>
-                                )}
-                                {hasRole('ROLE_EDITOR') && (
-                                    <li>
-                                        <Link to="/editor">Редактировать информацию о вузе (редактор)</Link>
-                                    </li>
-                                )}
-                            </ul>
-                        </div>
-                    )}
+                    {/* Колонка для минимального балла - теперь занимает 3 колонки */}
+                    <Col md={3}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Минимальный балл ЕГЭ</Form.Label>
+                            <Form.Control
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={minScore || ''}
+                                onChange={(e) => setMinScore(e.target.value ? Number(e.target.value) : null)}
+                            />
+                            <Form.Text className="text-muted">
+                                Введите значение от 0 до 100
+                            </Form.Text>
+                        </Form.Group>
+                    </Col>
 
-                    {/* Блок для неавторизованных пользователей */}
-                    {!isAuthenticated && (
-                        <div className="mt-4 p-3 border rounded bg-light">
-                            <h5>Зарегистрируйтесь для доступа к расширенным возможностям</h5>
-                            <p>Получите доступ к персональным рекомендациям, сохраняйте понравившиеся университеты и многое другое.</p>
-                            <div className="d-flex gap-2">
-                                <Button variant="primary" onClick={() => navigate('/register')}>
-                                    Зарегистрироваться
-                                </Button>
-                                <Button variant="outline-primary" onClick={() => navigate('/login')}>
-                                    Войти в аккаунт
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </Card.Body>
-            </Card>
+                    {/* Колонка для максимального балла - теперь занимает 3 колонки */}
+                    <Col md={3}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Максимальный балл ЕГЭ</Form.Label>
+                            <Form.Control
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={maxScore || ''}
+                                onChange={(e) => setMaxScore(e.target.value ? Number(e.target.value) : null)}
+                            />
+                            <Form.Text className="text-muted">
+                                Введите значение от 0 до 100
+                            </Form.Text>
+                        </Form.Group>
+                    </Col>
+                </Row>
 
-            {/* Блок с результатами поиска */}
+                <Button
+                    variant="primary"
+                    onClick={handleSearch}
+                    disabled={isLoading}
+                >
+                    {isLoading ? <Spinner size="sm" /> : 'Поиск'}
+                </Button>
+            </div>
+
+
+            {/* Обновлённый блок результатов */}
             <Card>
                 <Card.Header as="h5">Результаты поиска</Card.Header>
                 <Card.Body>
-                    <div className="list-group">
-                        <div className="list-group-item">
-                            <h5>Московский государственный университет</h5>
-                            <p>Москва • Государственный • Средний балл: 85.5</p>
-                            <Button variant="outline-primary" size="sm">
-                                Подробнее
-                            </Button>
+                    {isLoading ? (
+                        <div className="text-center">
+                            <Spinner animation="border" />
                         </div>
-                        <div className="list-group-item">
-                            <h5>Санкт-Петербургский государственный университет</h5>
-                            <p>Санкт-Петербург • Государственный • Средний балл: 82.0</p>
-                            <Button variant="outline-primary" size="sm">
-                                Подробнее
-                            </Button>
+                    ) : searchResults.length > 0 ? (
+                        <div className="row">
+                            {searchResults.map(university => (
+                                <div key={university.id} className="col-md-6 mb-3">
+                                    <UniversityCard university={university} />
+                                </div>
+                            ))}
                         </div>
-                        {/* Другие результаты */}
-                    </div>
+                    ) : (
+                        <p>Ничего не найдено. Измените параметры поиска.</p>
+                    )}
                 </Card.Body>
             </Card>
         </Container>

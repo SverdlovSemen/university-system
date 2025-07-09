@@ -39,6 +39,12 @@ public class SpecialtyController {
         return specialtyService.searchSpecialties(universityId, level, form, subject);
     }
 
+    @GetMapping("/by-subjects")
+    public List<SpecialtyResponse> getSpecialtiesBySubjects(
+            @RequestParam List<Long> subjectIds) {
+        return specialtyService.findSpecialtiesBySubjects(subjectIds);
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public SpecialtyResponse createSpecialty(@Valid @RequestBody SpecialtyRequest request) {

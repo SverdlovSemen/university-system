@@ -6,6 +6,9 @@ import RegisterPage from './pages/RegisterPage';
 import AdminDashboard from './pages/AdminDashboard';
 import EditorDashboard from './pages/EditorDashboard';
 import { useAuth } from './hooks/useAuth';
+import UniversityPage from './pages/UniversityPage';
+import SpecialtySearchPage from './pages/SpecialtySearchPage'; // Добавляем новый импорт
+import SpecialtyPage from './pages/SpecialtyPage'; // Добавляем новый импорт
 
 const ProtectedRoute: React.FC<{
     children: React.ReactNode,
@@ -29,8 +32,17 @@ const ProtectedRoute: React.FC<{
 const AppRouter = () => {
     return (
         <Routes>
-            {/* Основная страница - поиск (доступна всем) */}
+            {/* Основная страница - поиск университетов (доступна всем) */}
             <Route path="/" element={<SearchPage />} />
+
+            {/* Страница университета (доступна всем) */}
+            <Route path="/university/:id" element={<UniversityPage />} />
+
+            {/* Новая страница поиска специальностей (доступна всем) */}
+            <Route path="/specialty-search" element={<SpecialtySearchPage />} />
+
+            {/* Страница специальности (доступна всем) */}
+            <Route path="/specialty/:id" element={<SpecialtyPage />} />
 
             {/* Страницы аутентификации */}
             <Route path="/login" element={<LoginPage />} />

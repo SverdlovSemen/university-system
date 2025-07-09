@@ -36,3 +36,29 @@
     transform: rotate(360deg);
   }
 }
+/* Стили для страницы поиска специальностей */
+.subject-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.subject-item {
+  padding: 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  background-color: #f8f9fa;
+  transition: all 0.2s;
+}
+
+.subject-item:hover {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.subject-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}

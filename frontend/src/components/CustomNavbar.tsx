@@ -19,7 +19,8 @@ const CustomNavbar = () => {
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
                     <Nav className="me-auto">
-                        <Nav.Link as={Link} to="/">Поиск</Nav.Link>
+                        <Nav.Link as={Link} to="/">Поиск университетов</Nav.Link>
+                        <Nav.Link as={Link} to="/specialty-search">Поиск специальностей</Nav.Link> {/* Новая ссылка */}
                         {isAuthenticated && hasRole('ROLE_ADMIN') && (
                             <Nav.Link as={Link} to="/admin">Админ-панель</Nav.Link>
                         )}

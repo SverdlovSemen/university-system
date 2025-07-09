@@ -8,8 +8,10 @@ import com.unidata.university_system.dto.csv.SpecialtyCsvDTO;
 import com.unidata.university_system.mapper.SpecialtyMapper;
 import com.unidata.university_system.models.Faculty;
 import com.unidata.university_system.models.Specialty;
+import com.unidata.university_system.models.Subject;
 import com.unidata.university_system.repositories.FacultyRepository;
 import com.unidata.university_system.repositories.SpecialtyRepository;
+
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -34,6 +37,35 @@ public class SpecialtyService {
 
     @Autowired
     private SpecialtyMapper specialtyMapper;
+
+
+    public List<SpecialtyResponse> findSpecialtiesBySubjects(List<Long> subjectIds) {
+        if (subjectIds == null || subjectIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Получаем все специальности
+        List<Specialty> allSpecialties = specialtyRepository.findAll();
+
+        return allSpecialties.stream()
+                .filter(specialty -> hasMatchingCombination(specialty, subjectIds))
+                .map(specialtyMapper::fromSpecialty)
+                .collect(Collectors.toList());
+    }
+
+    private boolean hasMatchingCombination(Specialty specialty, List<Long> subjectIds) {
+        if (specialty.getSubjectCombinations() == null) {
+            return false;
+        }
+
+        return specialty.getSubjectCombinations().stream()
+                .anyMatch(combination ->
+                        combination.getSubjects() != null &&
+                                combination.getSubjects().stream()
+                                        .map(Subject::getId)
+                                        .allMatch(subjectIds::contains)
+                );
+    }
 
     public List<SpecialtyResponse> getAllSpecialties() {
         return specialtyRepository.findAll().stream()
