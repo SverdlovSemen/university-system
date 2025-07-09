@@ -70,7 +70,7 @@ public class RegionService {
     }
 
     @Transactional
-    public List<Region> importRegions(MultipartFile file, String mode) throws Exception {
+    public List<RegionResponse> importRegions(MultipartFile file, String mode) throws Exception {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("CSV file is missing or empty");
         }
@@ -109,8 +109,8 @@ public class RegionService {
             log.error("Failed to process regions CSV: {}", e.getMessage(), e);
             throw new Exception("Failed to process regions CSV: " + e.getMessage(), e);
         }
-        return savedRegions;
+
+        // Преобразование List<Region> в List<RegionResponse> с помощью RegionMapper
+        return regionMapper.fromRegionList(savedRegions);
     }
-
-
 }

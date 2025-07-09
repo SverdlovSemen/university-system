@@ -11,6 +11,7 @@ import com.unidata.university_system.models.Region;
 import com.unidata.university_system.repositories.CityRepository;
 import com.unidata.university_system.repositories.RegionRepository;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,11 +19,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class CityService {
 
@@ -72,32 +75,56 @@ public class CityService {
     }
 
     @Transactional
-    public List<City> importCities(MultipartFile file) throws Exception {
+    public List<CityResponse> importCities(MultipartFile file, String mode) throws Exception {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("CSV file is missing or empty");
+        }
+
+        if (!"ADD".equalsIgnoreCase(mode) && !"REPLACE".equalsIgnoreCase(mode)) {
+            throw new IllegalArgumentException("Invalid import mode: " + mode + ". Use ADD or REPLACE.");
+        }
+
         List<City> savedCities = new ArrayList<>();
-        try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+
+        try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             CsvToBean<CityCsvDTO> csvToBean = new CsvToBeanBuilder<CityCsvDTO>(reader)
                     .withType(CityCsvDTO.class)
                     .withIgnoreLeadingWhiteSpace(true)
                     .build();
 
             for (CityCsvDTO dto : csvToBean) {
-                Region region = regionRepository.findById(dto.getRegionId())
-                        .orElseThrow(() -> new IllegalArgumentException("Region with ID " + dto.getRegionId() + " not found"));
+                String name = dto.getName().trim();
+                String regionName = dto.getRegionName().trim();
 
-                City city;
-                if (dto.getId() == null) {
-                    city = new City();
-                } else {
-                    city = cityRepository.findById(dto.getId())
-                            .orElseThrow(() -> new IllegalArgumentException("City with ID " + dto.getId() + " not found"));
+                if (name.isEmpty() || regionName.isEmpty()) {
+                    throw new IllegalArgumentException("City name or region_name is missing in CSV");
                 }
-                city.setName(dto.getName());
-                city.setRegion(region);
-                savedCities.add(cityRepository.save(city));
+
+                Region region = regionRepository.findByNameIgnoreCase(regionName)
+                        .orElseThrow(() -> new IllegalArgumentException("Region not found: " + regionName));
+
+                Optional<City> existing = cityRepository.findByNameIgnoreCaseAndRegionId(name, region.getId());
+
+                if ("ADD".equalsIgnoreCase(mode)) {
+                    if (existing.isEmpty()) {
+                        City newCity = new City();
+                        newCity.setName(name);
+                        newCity.setRegion(region);
+                        savedCities.add(cityRepository.save(newCity));
+                    }
+                } else {
+                    City city = existing.orElseGet(City::new);
+                    city.setName(name);
+                    city.setRegion(region);
+                    savedCities.add(cityRepository.save(city));
+                }
             }
         } catch (Exception e) {
+            log.error("Failed to process cities CSV: {}", e.getMessage(), e);
             throw new Exception("Failed to process cities CSV: " + e.getMessage(), e);
         }
-        return savedCities;
+
+        // Преобразование List<City> в List<CityResponse> с помощью CityMapper
+        return cityMapper.fromCityList(savedCities);
     }
 }

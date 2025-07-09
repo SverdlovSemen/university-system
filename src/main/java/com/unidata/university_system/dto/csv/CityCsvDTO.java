@@ -13,6 +13,6 @@ public class CityCsvDTO {
     @CsvBindByName(column = "name", required = true)
     private String name;
 
-    @CsvBindByName(column = "region_id", required = true)
-    private Long regionId;
+    @CsvBindByName(column = "region_name", required = true)
+    private String regionName;
 }

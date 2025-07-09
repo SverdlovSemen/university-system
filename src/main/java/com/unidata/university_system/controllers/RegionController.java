@@ -52,10 +52,10 @@ public class RegionController {
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<List<Region>> importRegions(@RequestParam("file") MultipartFile file,
-                                                      @RequestParam("mode") String mode) { // "ADD" или "REPLACE"
+    public ResponseEntity<List<RegionResponse>> importRegions(@RequestParam("file") MultipartFile file,
+                                                              @RequestParam("mode") String mode) { // "ADD" или "REPLACE"
         try {
-            List<Region> regions = regionService.importRegions(file, mode);
+            List<RegionResponse> regions = regionService.importRegions(file, mode);
             return ResponseEntity.ok(regions);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(null);

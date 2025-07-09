@@ -5,6 +5,7 @@ import com.unidata.university_system.dto.CityResponse;
 import com.unidata.university_system.models.City;
 import com.unidata.university_system.services.CityService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,10 +51,11 @@ public class CityController {
         return ResponseEntity.notFound().build();
     }
 
-    @PostMapping("/import")
-    public ResponseEntity<List<City>> importCities(@RequestParam("file") MultipartFile file) {
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<CityResponse>> importCities(@RequestParam("file") MultipartFile file,
+                                                   @RequestParam("mode") String mode) { // "ADD" или "REPLACE"
         try {
-            List<City> cities = cityService.importCities(file);
+            List<CityResponse> cities = cityService.importCities(file, mode);
             return ResponseEntity.ok(cities);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(null);
