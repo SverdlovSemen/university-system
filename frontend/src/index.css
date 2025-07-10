@@ -11,3 +11,33 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+
+.react-select__control {
+  border-radius: 0.25rem;
+  border: 1px solid #ced4da;
+  min-height: 38px;
+}
+
+.react-select__menu {
+  z-index: 1000;
+}
+
+.react-select__multi-value {
+  background-color: #e9ecef;
+  border-radius: 0.2rem;
+}
+
+.react-select__multi-value__label {
+  color: #495057;
+  padding: 0.15rem 0.5rem;
+}
+
+.react-select__multi-value__remove {
+  border-radius: 0 0.2rem 0.2rem 0;
+}
+
+.react-select__multi-value__remove:hover {
+  background-color: #dc3545;
+  color: white;
+}

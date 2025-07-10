@@ -54,6 +54,11 @@ export interface SpecialtyRequest {
     description: string;
     facultyId: number;
 }
+export interface SelectOption {
+    value: number;
+    label: string;
+}
+
 
 export interface UniversityRequest {
     id: number;

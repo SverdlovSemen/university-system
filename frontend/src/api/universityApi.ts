@@ -7,9 +7,11 @@ import {
 
 const API_URL = '/api/universities';
 
+
 export const fetchUniversities = async (
     regionId?: number | null,
     subjectIds?: number[],
+    specialtyIds?: number[], // Новый параметр
     minScore?: number | null,
     maxScore?: number | null
 ): Promise<UniversityResponse[]> => {
@@ -21,10 +23,15 @@ export const fetchUniversities = async (
         subjectIds.forEach(id => params.append('subjectIds', id.toString()));
     }
 
+    // Добавляем передачу specialtyIds
+    if (specialtyIds && specialtyIds.length > 0) {
+        specialtyIds.forEach(id => params.append('specialtyIds', id.toString()));
+    }
+
     if (minScore) params.append('minScore', minScore.toString());
     if (maxScore) params.append('maxScore', maxScore.toString());
 
-    const response = await axios.get('/api/universities/search', { params });
+    const response = await axios.get(`${API_URL}/search`, { params });
     return response.data;
 };
 

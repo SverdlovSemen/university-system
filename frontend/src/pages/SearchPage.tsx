@@ -4,10 +4,13 @@ import { Button, Card, Container, Row, Col, Form, Spinner } from 'react-bootstra
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchAllRegions } from '../api/regionApi';
 import { fetchUniversities } from '../api/universityApi';
+import { searchSpecialties } from '../api/specialtyApi';
+import AsyncSelect from 'react-select/async';
 import {
     UniversityResponse,
-    SubjectResponse,
-    RegionResponse
+    RegionResponse,
+    SpecialtyResponse,
+    SelectOption
 } from '../types';
 import UniversityCard from '../components/UniversityCard';
 
@@ -16,21 +19,21 @@ const SearchPage = () => {
     const navigate = useNavigate();
 
     const [regions, setRegions] = useState<RegionResponse[]>([]);
-    const [subjects, setSubjects] = useState<SubjectResponse[]>([]);
     const [searchResults, setSearchResults] = useState<UniversityResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
+    // Состояния для фильтров
     const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
     const [minScore, setMinScore] = useState<number | null>(null);
     const [maxScore, setMaxScore] = useState<number | null>(null);
+    const [selectedSpecialties, setSelectedSpecialties] = useState<SelectOption[]>([]);
+
     useEffect(() => {
         const loadInitialData = async () => {
             setIsLoading(true);
             try {
                 const regionsData = await fetchAllRegions();
-
                 setRegions(regionsData);
-
             } catch (error) {
                 console.error('Ошибка загрузки данных', error);
             } finally {
@@ -41,24 +44,39 @@ const SearchPage = () => {
         loadInitialData();
     }, []);
 
+    // Функция для загрузки опций специальностей
+    const loadSpecialtyOptions = (inputValue: string): Promise<SelectOption[]> => {
+        return searchSpecialties(inputValue).then(specialties =>
+            specialties.map(s => ({
+                value: s.id,
+                label: `${s.programCode} - ${s.name}`
+            }))
+        );
+    };
+
     const handleSearch = async () => {
         setIsLoading(true);
         try {
             const regionParam = selectedRegion !== null ? selectedRegion : undefined;
             const minScoreParam = minScore !== null ? minScore : undefined;
-            const maxScoreParam = maxScore !== null ? maxScore : undefined; // Добавляем
+            const maxScoreParam = maxScore !== null ? maxScore : undefined;
+
+            // Преобразуем выбранные опции в массив ID специальностей
+            const specialtyIds = selectedSpecialties.map(option => option.value);
 
             console.log("Search parameters:", {
                 regionId: regionParam,
+                specialtyIds: specialtyIds,
                 minScore: minScoreParam,
-                maxScore: maxScoreParam  // Добавляем в логи
+                maxScore: maxScoreParam
             });
 
             const results = await fetchUniversities(
                 regionParam,
-                undefined,
+                undefined, // subjectIds пока не используется
+                specialtyIds.length > 0 ? specialtyIds : undefined,
                 minScoreParam,
-                maxScoreParam  // Добавляем
+                maxScoreParam
             );
 
             console.log("Search results:", results);
@@ -72,13 +90,11 @@ const SearchPage = () => {
 
     return (
         <Container className="mt-4">
-
-            {/* Обновлённый блок фильтров */}
             <div className="mb-4 p-3 border rounded">
                 <h6>Фильтры поиска</h6>
                 <Row>
-                    {/* Колонка для региона - теперь занимает 6 колонок */}
-                    <Col md={6}>
+                    {/* Колонка для региона */}
+                    <Col md={4}>
                         <Form.Group className="mb-3">
                             <Form.Label>Регион</Form.Label>
                             <Form.Select
@@ -93,10 +109,36 @@ const SearchPage = () => {
                         </Form.Group>
                     </Col>
 
-                    {/* Колонка для минимального балла - теперь занимает 3 колонки */}
-                    <Col md={3}>
+                    {/* Колонка для специальностей */}
+                    <Col md={4}>
                         <Form.Group className="mb-3">
-                            <Form.Label>Минимальный балл ЕГЭ</Form.Label>
+                            <Form.Label>Специальности</Form.Label>
+                            <AsyncSelect
+                                isMulti
+                                cacheOptions
+                                defaultOptions
+                                loadOptions={loadSpecialtyOptions}
+                                value={selectedSpecialties}
+                                onChange={(selected) => setSelectedSpecialties(selected as SelectOption[])}
+                                placeholder="Поиск по коду или названию..."
+                                noOptionsMessage={({ inputValue }) =>
+                                    inputValue ? "Ничего не найдено" : "Введите для поиска"
+                                }
+                                loadingMessage={() => "Загрузка..."}
+                                styles={{
+                                    control: (base) => ({
+                                        ...base,
+                                        minHeight: '38px',
+                                    }),
+                                }}
+                            />
+                        </Form.Group>
+                    </Col>
+
+                    {/* Колонка для минимального балла */}
+                    <Col md={2}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Мин. балл</Form.Label>
                             <Form.Control
                                 type="number"
                                 min="0"
@@ -105,15 +147,15 @@ const SearchPage = () => {
                                 onChange={(e) => setMinScore(e.target.value ? Number(e.target.value) : null)}
                             />
                             <Form.Text className="text-muted">
-                                Введите значение от 0 до 100
+                                От 0 до 100
                             </Form.Text>
                         </Form.Group>
                     </Col>
 
-                    {/* Колонка для максимального балла - теперь занимает 3 колонки */}
-                    <Col md={3}>
+                    {/* Колонка для максимального балла */}
+                    <Col md={2}>
                         <Form.Group className="mb-3">
-                            <Form.Label>Максимальный балл ЕГЭ</Form.Label>
+                            <Form.Label>Макс. балл</Form.Label>
                             <Form.Control
                                 type="number"
                                 min="0"
@@ -122,7 +164,7 @@ const SearchPage = () => {
                                 onChange={(e) => setMaxScore(e.target.value ? Number(e.target.value) : null)}
                             />
                             <Form.Text className="text-muted">
-                                Введите значение от 0 до 100
+                                От 0 до 100
                             </Form.Text>
                         </Form.Group>
                     </Col>
@@ -132,30 +174,37 @@ const SearchPage = () => {
                     variant="primary"
                     onClick={handleSearch}
                     disabled={isLoading}
+                    className="mt-2"
                 >
-                    {isLoading ? <Spinner size="sm" /> : 'Поиск'}
+                    {isLoading ? (
+                        <>
+                            <Spinner size="sm" animation="border" /> Поиск...
+                        </>
+                    ) : 'Поиск университетов'}
                 </Button>
             </div>
 
-
-            {/* Обновлённый блок результатов */}
+            {/* Блок результатов */}
             <Card>
                 <Card.Header as="h5">Результаты поиска</Card.Header>
                 <Card.Body>
                     {isLoading ? (
                         <div className="text-center">
                             <Spinner animation="border" />
+                            <p className="mt-2">Идет поиск университетов...</p>
                         </div>
                     ) : searchResults.length > 0 ? (
-                        <div className="row">
+                        <Row>
                             {searchResults.map(university => (
-                                <div key={university.id} className="col-md-6 mb-3">
+                                <Col key={university.id} md={6} className="mb-3">
                                     <UniversityCard university={university} />
-                                </div>
+                                </Col>
                             ))}
-                        </div>
+                        </Row>
                     ) : (
-                        <p>Ничего не найдено. Измените параметры поиска.</p>
+                        <p className="text-center text-muted">
+                            Ничего не найдено. Измените параметры поиска.
+                        </p>
                     )}
                 </Card.Body>
             </Card>

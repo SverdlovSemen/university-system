@@ -3,6 +3,14 @@ import { SpecialtyResponse } from '../types';
 
 const API_URL = '/api/specialties';
 
+export const searchSpecialties = async (query?: string): Promise<SpecialtyResponse[]> => {
+    const params = new URLSearchParams();
+    if (query) params.append('query', query);
+
+    const response = await axios.get(`${API_URL}/search`, { params });
+    return response.data;
+};
+
 export const fetchSpecialtiesByUniversity = async (universityId: number): Promise<SpecialtyResponse[]> => {
     const response = await axios.get(`${API_URL}/university/${universityId}`);
     return response.data;
