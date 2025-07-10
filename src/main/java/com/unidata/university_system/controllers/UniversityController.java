@@ -4,6 +4,7 @@ import com.unidata.university_system.dto.UniversityRequest;
 import com.unidata.university_system.dto.UniversityResponse;
 import com.unidata.university_system.models.University;
 import com.unidata.university_system.services.UniversityService;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -54,10 +55,18 @@ public class UniversityController {
     @GetMapping("/search")
     public List<UniversityResponse> searchUniversities(
             @RequestParam(required = false) Long regionId,
+            @RequestParam(required = false) @Parameter(description = "List of specialty IDs") List<Long> specialtyIds,
             @RequestParam(required = false) List<Long> subjectIds,
             @RequestParam(required = false) Double minScore,
             @RequestParam(required = false) Double maxScore) {
-        return universityService.searchUniversities(regionId, subjectIds, minScore, maxScore);
+
+        return universityService.searchUniversities(
+                regionId,
+                specialtyIds,
+                subjectIds,
+                minScore,
+                maxScore
+        );
     }
 
     @GetMapping("/analytics/count")

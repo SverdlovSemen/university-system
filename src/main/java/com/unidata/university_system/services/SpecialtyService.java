@@ -115,8 +115,19 @@ public class SpecialtyService {
                 .collect(Collectors.toList());
     }
 
-    public List<SpecialtyResponse> searchSpecialties(Long universityId, String level, String form, String subject) {
-        return specialtyRepository.searchSpecialties(universityId, level, form, subject).stream()
+    public List<SpecialtyResponse> searchSpecialties(
+            Long universityId,
+            String query, // Новый параметр
+            String level,
+            String form,
+            String subject) {
+        return specialtyRepository.searchSpecialties(
+                        universityId,
+                        query, // Передаем в репозиторий
+                        level,
+                        form,
+                        subject
+                ).stream()
                 .map(specialtyMapper::fromSpecialty)
                 .collect(Collectors.toList());
     }

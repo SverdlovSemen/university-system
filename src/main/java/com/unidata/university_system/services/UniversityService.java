@@ -110,6 +110,7 @@ public class UniversityService {
     public List<UniversityResponse> searchUniversities(
             Long regionId,
             List<Long> subjectIds,
+            List<Long> specialtyIds,
             Double minScore,
             Double maxScore) {
 
@@ -128,6 +129,13 @@ public class UniversityService {
             Join<University, City> cityJoin = universityRoot.join("city");
             Join<City, Region> regionJoin = cityJoin.join("region");
             predicates.add(cb.equal(regionJoin.get("id"), regionId));
+        }
+
+        // фильтр по специальностям
+        if (specialtyIds != null && !specialtyIds.isEmpty()) {
+            Join<University, Faculty> facultyJoin = universityRoot.join("faculties");
+            Join<Faculty, Specialty> specialtyJoin = facultyJoin.join("specialties");
+            predicates.add(specialtyJoin.get("id").in(specialtyIds));
         }
 
         // Фильтр по предметам
@@ -154,6 +162,10 @@ public class UniversityService {
         }
 
         // Собираем все условия
+
+        // Сортировка по рейтингу
+        cq.orderBy(cb.asc(universityRoot.get("countryRanking")));
+
         cq.where(predicates.toArray(new Predicate[0])).distinct(true);
 
         // Выполняем запрос

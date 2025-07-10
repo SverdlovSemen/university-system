@@ -33,10 +33,17 @@ public class SpecialtyController {
     @GetMapping("/search")
     public List<SpecialtyResponse> searchSpecialties(
             @RequestParam(required = false) Long universityId,
+            @RequestParam(required = false) String query, // Новый параметр
             @RequestParam(required = false) String level,
             @RequestParam(required = false) String form,
             @RequestParam(required = false) String subject) {
-        return specialtyService.searchSpecialties(universityId, level, form, subject);
+        return specialtyService.searchSpecialties(
+                universityId,
+                query, // Передаем в сервис
+                level,
+                form,
+                subject
+        );
     }
 
     @GetMapping("/by-subjects")
