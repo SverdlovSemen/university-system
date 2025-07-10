@@ -114,14 +114,10 @@ public class UniversityService {
             Double minScore,
             Double maxScore) {
 
-
-        // Базовый запрос
-
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<University> cq = cb.createQuery(University.class);
         Root<University> universityRoot = cq.from(University.class);
 
-        // Список условий
         List<Predicate> predicates = new ArrayList<>();
 
         // Фильтр по региону
@@ -131,21 +127,32 @@ public class UniversityService {
             predicates.add(cb.equal(regionJoin.get("id"), regionId));
         }
 
-        // фильтр по специальностям
+        // Фильтр по специальностям (исправленный)
         if (specialtyIds != null && !specialtyIds.isEmpty()) {
-            Join<University, Faculty> facultyJoin = universityRoot.join("faculties");
-            Join<Faculty, Specialty> specialtyJoin = facultyJoin.join("specialties");
-            predicates.add(specialtyJoin.get("id").in(specialtyIds));
+            // Создаем подзапрос для университетов с нужными специальностями
+            Subquery<Long> universitySubquery = cq.subquery(Long.class);
+            Root<Faculty> facultyRoot = universitySubquery.from(Faculty.class);
+            Join<Faculty, Specialty> specialtyJoin = facultyRoot.join("specialties");
+
+            universitySubquery.select(facultyRoot.get("university").get("id"))
+                    .where(specialtyJoin.get("id").in(specialtyIds));
+
+            predicates.add(universityRoot.get("id").in(universitySubquery));
         }
 
         // Фильтр по предметам
         if (subjectIds != null && !subjectIds.isEmpty()) {
-            Join<University, Faculty> facultyJoin = universityRoot.join("faculties");
-            Join<Faculty, Specialty> specialtyJoin = facultyJoin.join("specialties");
-            Join<Specialty, SubjectCombination> combinationJoin = specialtyJoin.join("subjectCombinations");
-            Join<SubjectCombination, Subject> subjectJoin = combinationJoin.join("requiredSubjects");
+            // Создаем подзапрос для университетов с нужными предметами
+            Subquery<Long> subjectSubquery = cq.subquery(Long.class);
+            Root<SubjectCombination> combinationRoot = subjectSubquery.from(SubjectCombination.class);
+            Join<SubjectCombination, Specialty> combinationSpecialtyJoin = combinationRoot.join("specialty");
+            Join<Specialty, Faculty> specialtyFacultyJoin = combinationSpecialtyJoin.join("faculty");
+            Join<SubjectCombination, Subject> subjectJoin = combinationRoot.join("subjects");
 
-            predicates.add(subjectJoin.get("id").in(subjectIds));
+            subjectSubquery.select(specialtyFacultyJoin.get("university").get("id"))
+                    .where(subjectJoin.get("id").in(subjectIds));
+
+            predicates.add(universityRoot.get("id").in(subjectSubquery));
         }
 
         // Фильтр по баллу
@@ -161,12 +168,16 @@ public class UniversityService {
             }
         }
 
-        // Собираем все условия
-
         // Сортировка по рейтингу
         cq.orderBy(cb.asc(universityRoot.get("countryRanking")));
 
-        cq.where(predicates.toArray(new Predicate[0])).distinct(true);
+        // Убираем дубликаты
+        cq.distinct(true);
+
+        // Собираем все условия
+        if (!predicates.isEmpty()) {
+            cq.where(cb.and(predicates.toArray(new Predicate[0])));
+        }
 
         // Выполняем запрос
         TypedQuery<University> query = entityManager.createQuery(cq);

@@ -16,19 +16,23 @@ public interface SpecialtyRepository extends JpaRepository<Specialty, Long> {
     @Query("SELECT s FROM Specialty s WHERE s.faculty.university.id = :universityId")
     List<Specialty> findByUniversityId(@Param("universityId") Long universityId);
 
-    @Query("SELECT DISTINCT s FROM Specialty s " +
-            "LEFT JOIN s.subjectCombinations sc " +
-            "LEFT JOIN sc.subjects subj " +
-            "WHERE (:universityId IS NULL OR s.faculty.university.id = :universityId) " +
+    @Query(value = "SELECT DISTINCT s.* FROM specialty s " +
+            "LEFT JOIN subject_combination sc ON s.id = sc.specialty_id " +
+            "LEFT JOIN required_subject rs ON sc.id = rs.combination_id " +
+            "LEFT JOIN subject subj ON subj.id = rs.subject_id " +
+            "JOIN faculty f ON f.id = s.faculty_id " +
+            "WHERE " +
+            "(:universityId IS NULL OR f.university_id = :universityId) " +
             "AND (:query IS NULL OR " +
-            "   LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "   LOWER(s.programCode) LIKE LOWER(CONCAT('%', :query, '%'))) " +
-            "AND (:level IS NULL OR s.programCode LIKE CONCAT(:level, '%')) " +
-            "AND (:form IS NULL OR s.description LIKE CONCAT('%', :form, '%')) " +
-            "AND (:subject IS NULL OR subj.name = :subject)")
+            "   LOWER(s.name) LIKE '%' || LOWER(CAST(:query AS TEXT)) || '%' OR " + // Добавлен CAST
+            "   LOWER(s.program_code) LIKE '%' || LOWER(CAST(:query AS TEXT)) || '%') " + // Добавлен CAST
+            "AND (:level IS NULL OR s.program_code LIKE CAST(:level AS TEXT) || '%') " + // Добавлен CAST
+            "AND (:form IS NULL OR s.description LIKE '%' || CAST(:form AS TEXT) || '%') " + // Добавлен CAST
+            "AND (:subject IS NULL OR subj.name = CAST(:subject AS TEXT))", // Добавлен CAST
+            nativeQuery = true)
     List<Specialty> searchSpecialties(
             @Param("universityId") Long universityId,
-            @Param("query") String query, // Новый параметр для общего поиска
+            @Param("query") String query,
             @Param("level") String level,
             @Param("form") String form,
             @Param("subject") String subject);
