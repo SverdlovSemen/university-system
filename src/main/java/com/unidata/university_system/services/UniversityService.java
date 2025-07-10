@@ -125,6 +125,31 @@ public class UniversityService {
         return false;
     }
 
+    public List<UniversityResponse> searchUniversitiesByName(String nameQuery, int limit) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<University> cq = cb.createQuery(University.class);
+        Root<University> root = cq.from(University.class);
+
+        List<Predicate> predicates = new ArrayList<>();
+
+        if (nameQuery != null && !nameQuery.isEmpty()) {
+            String pattern = "%" + nameQuery.toLowerCase() + "%";
+            Predicate shortNamePredicate = cb.like(cb.lower(root.get("shortName")), pattern);
+            Predicate fullNamePredicate = cb.like(cb.lower(root.get("fullName")), pattern);
+            predicates.add(cb.or(shortNamePredicate, fullNamePredicate));
+        }
+
+        cq.where(predicates.toArray(new Predicate[0]));
+        cq.orderBy(cb.asc(root.get("countryRanking"))); // Сортируем по рейтингу
+
+        return entityManager.createQuery(cq)
+                .setMaxResults(limit)
+                .getResultList()
+                .stream()
+                .map(universityMapper::fromUniversity)
+                .collect(Collectors.toList());
+    }
+
     public List<UniversityResponse> searchUniversities(
             String nameQuery,
             Long regionId,

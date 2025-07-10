@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Button, Card, Container, Row, Col, Form, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { fetchAllRegions } from '../api/regionApi';
-import { fetchUniversities } from '../api/universityApi';
+import { fetchUniversities, searchUniversities } from '../api/universityApi';
 import { searchSpecialties } from '../api/specialtyApi';
 import AsyncSelect from 'react-select/async';
+import debounce from 'lodash/debounce';
 import {
     UniversityResponse,
     RegionResponse,
@@ -55,6 +56,21 @@ const SearchPage = () => {
         );
     };
 
+    // Функция для загрузки опций университетов с debounce
+    const loadUniversityOptions = useCallback(
+        debounce((inputValue: string, callback: (options: SelectOption[]) => void) => {
+            searchUniversities(inputValue, 10).then(universities => {
+                callback(
+                    universities.map(u => ({
+                        value: u.id,
+                        label: `${u.shortName} - ${u.fullName}`
+                    }))
+                );
+            });
+        }, 300),
+        []
+    );
+
     const handleSearch = async () => {
         setIsLoading(true);
         try {
@@ -80,28 +96,48 @@ const SearchPage = () => {
         }
     };
 
+    // Обработчик выбора университета из списка
+    const handleUniversitySelect = (selectedOption: SelectOption | null) => {
+        if (selectedOption) {
+            navigate(`/university/${selectedOption.value}`);
+        }
+    };
+
     return (
         <Container className="mt-4">
             <div className="mb-4 p-3 border rounded">
                 <h6>Фильтры поиска</h6>
 
+                {/* Строка с поиском по названию университета */}
                 <Row className="mb-3">
                     <Col md={12}>
                         <Form.Group>
-                            <Form.Label>Название университета</Form.Label>
-                            <Form.Control
-                                type="text"
+                            <Form.Label>Поиск университета</Form.Label>
+                            <AsyncSelect
+                                cacheOptions
+                                defaultOptions
+                                loadOptions={loadUniversityOptions}
+                                onChange={handleUniversitySelect}
                                 placeholder="Введите название или аббревиатуру (МГУ, СПбГУ...)"
-                                value={nameQuery}
-                                onChange={(e) => setNameQuery(e.target.value)}
+                                noOptionsMessage={({ inputValue }) =>
+                                    inputValue ? "Ничего не найдено" : "Введите для поиска"
+                                }
+                                loadingMessage={() => "Загрузка..."}
+                                styles={{
+                                    control: (base) => ({
+                                        ...base,
+                                        minHeight: '38px',
+                                    }),
+                                }}
                             />
                             <Form.Text className="text-muted">
-                                Поиск по полному названию или сокращению
+                                Выберите университет из списка, чтобы перейти на его страницу
                             </Form.Text>
                         </Form.Group>
                     </Col>
                 </Row>
 
+                {/* Остальные фильтры */}
                 <Row>
                     <Col md={4}>
                         <Form.Group className="mb-3">

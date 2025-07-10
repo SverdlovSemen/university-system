@@ -58,3 +58,12 @@ export const fetchUniversitiesBySpecialty = async (specialtyId: number): Promise
     const response = await axios.get(`${API_URL}/by-specialty/${specialtyId}`);
     return response.data;
 };
+
+export const searchUniversities = async (query: string, limit: number = 10): Promise<UniversityResponse[]> => {
+    const params = new URLSearchParams();
+    params.append('nameQuery', query);
+    params.append('limit', limit.toString());
+
+    const response = await axios.get(`${API_URL}/search-by-name`, { params });
+    return response.data;
+};

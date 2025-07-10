@@ -52,6 +52,14 @@ public class UniversityController {
         return ResponseEntity.notFound().build();
     }
 
+    @GetMapping("/search-by-name")
+    public List<UniversityResponse> searchUniversitiesByName(
+            @RequestParam(required = false) String nameQuery,
+            @RequestParam(defaultValue = "10") int limit) {
+
+        return universityService.searchUniversitiesByName(nameQuery, limit);
+    }
+
     @GetMapping("/search")
     public List<UniversityResponse> searchUniversities(
             @RequestParam(required = false) String nameQuery,
