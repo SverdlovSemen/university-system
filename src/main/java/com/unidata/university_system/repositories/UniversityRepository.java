@@ -12,10 +12,9 @@ import java.util.Optional;
 @Repository
 public interface UniversityRepository extends JpaRepository<University, Long> {
     // Поиск по названию (частичное совпадение, регистр не важен)
-    List<University> findByNameContainingIgnoreCase(String name);
+    List<University> findByShortNameContainingIgnoreCase(String shortName);
 
-    // Поиск по названию и ID города (регистр не важен)
-    Optional<University> findByNameIgnoreCaseAndCityId(String name, Long cityId);
+
 
     // Фильтрация по региону
     @Query("SELECT u FROM University u WHERE u.city.region.name = :regionName")
@@ -26,11 +25,13 @@ public interface UniversityRepository extends JpaRepository<University, Long> {
 
     // Комбинированный поиск
     @Query("SELECT u FROM University u WHERE " +
-            "(:name IS NULL OR LOWER(u.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
+            "(:query IS NULL OR " +
+            "   LOWER(u.shortName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "   LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
             "(:region IS NULL OR u.city.region.name = :region) AND " +
             "(:type IS NULL OR u.type = :type)")
     List<University> search(
-            @Param("name") String name,
+            @Param("query") String query,
             @Param("region") String region,
             @Param("type") String type
     );
@@ -43,12 +44,17 @@ public interface UniversityRepository extends JpaRepository<University, Long> {
             "ORDER BY u.countryRanking ASC")
     List<University> findBySpecialties(@Param("specialtyIds") List<Long> specialtyIds);
 
+    Optional<University> findByShortNameIgnoreCaseAndCityId(String shortName, Long cityId);
+
     //Поиск с фильтрами
 
     @Query("SELECT DISTINCT u FROM University u " +
             "LEFT JOIN u.faculties f " +
             "LEFT JOIN f.specialties s " +
-            "WHERE (:name IS NULL OR LOWER(u.name) LIKE LOWER(CONCAT('%', :name, '%'))) " +
+            "WHERE " +
+            "(:query IS NULL OR " +
+            "   LOWER(u.shortName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "   LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))) " +
             "AND (:regionId IS NULL OR u.city.region.id = :regionId) " +
             "AND (:type IS NULL OR u.type = :type) " +
             "AND (:minScore IS NULL OR u.avgEgeScore >= :minScore) " +
@@ -56,7 +62,7 @@ public interface UniversityRepository extends JpaRepository<University, Long> {
             "AND (:specialtyIds IS NULL OR s.id IN :specialtyIds) " +
             "ORDER BY u.countryRanking ASC")
     List<University> searchWithFilters(
-            @Param("name") String name,
+            @Param("query") String query,
             @Param("regionId") Long regionId,
             @Param("type") String type,
             @Param("minScore") Double minScore,

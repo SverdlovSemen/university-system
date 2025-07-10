@@ -16,8 +16,11 @@ public class University {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false)
-    private String name;
+    @Column(name = "short_name", nullable = false)
+    private String shortName;
+
+    @Column(name = "full_name", nullable = false)
+    private String fullName;
 
     @Column(name = "type", nullable = false)
     private String type;

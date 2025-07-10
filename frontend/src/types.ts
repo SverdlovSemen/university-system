@@ -17,7 +17,8 @@ export interface FacultyResponse {
 
 export interface UniversityResponse {
     id: number;
-    name: string;
+    shortName: string;
+    fullName: string;
     type: string;
     avgEgeScore: number | null;
     countryRanking: number | null;

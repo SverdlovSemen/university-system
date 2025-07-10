@@ -54,16 +54,18 @@ public class UniversityController {
 
     @GetMapping("/search")
     public List<UniversityResponse> searchUniversities(
+            @RequestParam(required = false) String nameQuery,
             @RequestParam(required = false) Long regionId,
-            @RequestParam(required = false) @Parameter(description = "List of specialty IDs") List<Long> specialtyIds,
+            @RequestParam(required = false) List<Long> specialtyIds,
             @RequestParam(required = false) List<Long> subjectIds,
             @RequestParam(required = false) Double minScore,
             @RequestParam(required = false) Double maxScore) {
 
         return universityService.searchUniversities(
+                nameQuery,
                 regionId,
-                specialtyIds,
                 subjectIds,
+                specialtyIds,
                 minScore,
                 maxScore
         );

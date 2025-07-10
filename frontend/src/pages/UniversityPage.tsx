@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Card, Button, Spinner, Row, Col, ListGroup, Tab, Tabs } from 'react-bootstrap';
 import { getUniversityById } from '../api/universityApi';
 import { fetchSpecialtiesByUniversity } from '../api/specialtyApi';
-import {UniversityResponse, SpecialtyResponse, SubjectResponse} from '../types';
+import { UniversityResponse, SpecialtyResponse, SubjectResponse } from '../types';
 import { useAuth } from '../hooks/useAuth';
 
 const UniversityPage = () => {
@@ -80,7 +80,11 @@ const UniversityPage = () => {
                 <Card.Body>
                     <Row>
                         <Col md={8}>
-                            <Card.Title>{university.name}</Card.Title>
+                            {/* Исправлено: используем shortName и fullName */}
+                            <Card.Title>{university.shortName}</Card.Title>
+                            <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.9rem' }}>
+                                {university.fullName}
+                            </Card.Subtitle>
                             <Card.Subtitle className="mb-2 text-muted">
                                 {university.city?.name}, {university.city?.region?.name}
                             </Card.Subtitle>
@@ -138,8 +142,6 @@ const UniversityPage = () => {
                                 <ListGroup>
                                     {specialties.map(specialty => {
                                         const subjectCombinations = specialty.subjectCombinations || [];
-
-                                        // Обновленная проверка с subjects вместо requiredSubjects
                                         const hasSubjects = subjectCombinations.some(
                                             comb => comb.subjects && comb.subjects.length > 0
                                         );

@@ -4,7 +4,8 @@ import java.util.List;
 
 public record UniversityResponse(
         Long id,
-        String name,
+        String shortName,
+        String fullName,
         String type,
         Double avgEgeScore,
         Integer countryRanking,

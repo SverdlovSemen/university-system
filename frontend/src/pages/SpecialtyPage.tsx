@@ -151,7 +151,9 @@ const SpecialtyPage = () => {
                                 >
                                     <div className="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <h5 className="mb-1">{university.name}</h5>
+                                            {/* Исправлено: используем shortName и fullName */}
+                                            <h5 className="mb-1">{university.shortName}</h5>
+                                            <div className="text-muted small">{university.fullName}</div>
                                             <div className="text-muted">
                                                 {university.city?.name}, {university.city?.region?.name}
                                             </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Button, Card, Container, Row, Col, Form, Spinner } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { fetchAllRegions } from '../api/regionApi';
 import { fetchUniversities } from '../api/universityApi';
 import { searchSpecialties } from '../api/specialtyApi';
@@ -15,12 +15,13 @@ import {
 import UniversityCard from '../components/UniversityCard';
 
 const SearchPage = () => {
-    const { user, isAuthenticated, hasRole } = useAuth();
+    const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
     const [regions, setRegions] = useState<RegionResponse[]>([]);
     const [searchResults, setSearchResults] = useState<UniversityResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [nameQuery, setNameQuery] = useState<string>('');
 
     // Состояния для фильтров
     const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
@@ -60,26 +61,17 @@ const SearchPage = () => {
             const regionParam = selectedRegion !== null ? selectedRegion : undefined;
             const minScoreParam = minScore !== null ? minScore : undefined;
             const maxScoreParam = maxScore !== null ? maxScore : undefined;
-
-            // Преобразуем выбранные опции в массив ID специальностей
             const specialtyIds = selectedSpecialties.map(option => option.value);
 
-            console.log("Search parameters:", {
-                regionId: regionParam,
-                specialtyIds: specialtyIds,
-                minScore: minScoreParam,
-                maxScore: maxScoreParam
-            });
-
             const results = await fetchUniversities(
+                nameQuery.trim() || undefined,
                 regionParam,
-                undefined, // subjectIds пока не используется
+                undefined,
                 specialtyIds.length > 0 ? specialtyIds : undefined,
                 minScoreParam,
                 maxScoreParam
             );
 
-            console.log("Search results:", results);
             setSearchResults(results);
         } catch (error) {
             console.error('Ошибка поиска', error);
@@ -92,8 +84,25 @@ const SearchPage = () => {
         <Container className="mt-4">
             <div className="mb-4 p-3 border rounded">
                 <h6>Фильтры поиска</h6>
+
+                <Row className="mb-3">
+                    <Col md={12}>
+                        <Form.Group>
+                            <Form.Label>Название университета</Form.Label>
+                            <Form.Control
+                                type="text"
+                                placeholder="Введите название или аббревиатуру (МГУ, СПбГУ...)"
+                                value={nameQuery}
+                                onChange={(e) => setNameQuery(e.target.value)}
+                            />
+                            <Form.Text className="text-muted">
+                                Поиск по полному названию или сокращению
+                            </Form.Text>
+                        </Form.Group>
+                    </Col>
+                </Row>
+
                 <Row>
-                    {/* Колонка для региона */}
                     <Col md={4}>
                         <Form.Group className="mb-3">
                             <Form.Label>Регион</Form.Label>
@@ -109,7 +118,6 @@ const SearchPage = () => {
                         </Form.Group>
                     </Col>
 
-                    {/* Колонка для специальностей */}
                     <Col md={4}>
                         <Form.Group className="mb-3">
                             <Form.Label>Специальности</Form.Label>
@@ -135,7 +143,6 @@ const SearchPage = () => {
                         </Form.Group>
                     </Col>
 
-                    {/* Колонка для минимального балла */}
                     <Col md={2}>
                         <Form.Group className="mb-3">
                             <Form.Label>Мин. балл</Form.Label>
@@ -152,7 +159,6 @@ const SearchPage = () => {
                         </Form.Group>
                     </Col>
 
-                    {/* Колонка для максимального балла */}
                     <Col md={2}>
                         <Form.Group className="mb-3">
                             <Form.Label>Макс. балл</Form.Label>
@@ -184,7 +190,6 @@ const SearchPage = () => {
                 </Button>
             </div>
 
-            {/* Блок результатов */}
             <Card>
                 <Card.Header as="h5">Результаты поиска</Card.Header>
                 <Card.Body>

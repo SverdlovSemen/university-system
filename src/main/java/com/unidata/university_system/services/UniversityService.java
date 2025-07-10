@@ -44,8 +44,6 @@ public class UniversityService {
     @PersistenceContext
     private EntityManager entityManager;
 
-
-
     public List<UniversityResponse> getAllUniversities() {
         return universityRepository.findAll().stream()
                 .map(universityMapper::fromUniversity)
@@ -59,6 +57,12 @@ public class UniversityService {
 
     public UniversityResponse createUniversity(UniversityRequest request) {
         University university = universityMapper.toUniversity(request);
+
+        // Проверяем существование города
+        City city = cityRepository.findById(request.cityId())
+                .orElseThrow(() -> new IllegalArgumentException("City not found: " + request.cityId()));
+        university.setCity(city);
+
         University savedUniversity = universityRepository.save(university);
         return universityMapper.fromUniversity(savedUniversity);
     }
@@ -91,9 +95,23 @@ public class UniversityService {
     public Optional<UniversityResponse> updateUniversity(Long id, UniversityRequest request) {
         Optional<University> existingUniversity = universityRepository.findById(id);
         if (existingUniversity.isPresent()) {
-            University updatedUniversity = universityMapper.toUniversity(request);
-            updatedUniversity.setId(id); // Ensure ID is preserved
-            University savedUniversity = universityRepository.save(updatedUniversity);
+            University university = existingUniversity.get();
+
+            // Обновляем поля
+            university.setShortName(request.shortName());
+            university.setFullName(request.fullName());
+            university.setType(request.type());
+            university.setAvgEgeScore(request.avgEgeScore());
+            university.setCountryRanking(request.countryRanking());
+
+            // Обновляем город, если изменился cityId
+            if (request.cityId() != null && !request.cityId().equals(university.getCity().getId())) {
+                City city = cityRepository.findById(request.cityId())
+                        .orElseThrow(() -> new IllegalArgumentException("City not found: " + request.cityId()));
+                university.setCity(city);
+            }
+
+            University savedUniversity = universityRepository.save(university);
             return Optional.of(universityMapper.fromUniversity(savedUniversity));
         }
         return Optional.empty();
@@ -108,6 +126,7 @@ public class UniversityService {
     }
 
     public List<UniversityResponse> searchUniversities(
+            String nameQuery,
             Long regionId,
             List<Long> subjectIds,
             List<Long> specialtyIds,
@@ -119,6 +138,14 @@ public class UniversityService {
         Root<University> universityRoot = cq.from(University.class);
 
         List<Predicate> predicates = new ArrayList<>();
+
+        //Фильтр по названию
+        if (nameQuery != null && !nameQuery.isEmpty()) {
+            String pattern = "%" + nameQuery.toLowerCase() + "%";
+            Predicate shortNamePredicate = cb.like(cb.lower(universityRoot.get("shortName")), pattern);
+            Predicate fullNamePredicate = cb.like(cb.lower(universityRoot.get("fullName")), pattern);
+            predicates.add(cb.or(shortNamePredicate, fullNamePredicate));
+        }
 
         // Фильтр по региону
         if (regionId != null) {
@@ -213,23 +240,29 @@ public class UniversityService {
                     .build();
 
             for (UniversityCsvDTO dto : csvToBean) {
-                String name = dto.getName() != null ? dto.getName().trim() : null;
+                String shortName = dto.getShortName() != null ? dto.getShortName().trim() : null;
+                String fullName = dto.getFullName() != null ? dto.getFullName().trim() : null;
                 String type = dto.getType() != null ? dto.getType().trim() : null;
                 String cityName = dto.getCityName() != null ? dto.getCityName().trim() : null;
 
-                if (name == null || name.isEmpty() || type == null || type.isEmpty() || cityName == null || cityName.isEmpty()) {
-                    throw new IllegalArgumentException("University name, type, or city_name is missing in CSV");
+                if (shortName == null || shortName.isEmpty() ||
+                        fullName == null || fullName.isEmpty() ||
+                        type == null || type.isEmpty() ||
+                        cityName == null || cityName.isEmpty()) {
+                    throw new IllegalArgumentException("University names, type, or city_name is missing in CSV");
                 }
 
                 City city = cityRepository.findByNameIgnoreCase(cityName)
                         .orElseThrow(() -> new IllegalArgumentException("City not found: " + cityName));
 
-                Optional<University> existing = universityRepository.findByNameIgnoreCaseAndCityId(name, city.getId());
+                // Используем новый метод репозитория
+                Optional<University> existing = universityRepository.findByShortNameIgnoreCaseAndCityId(shortName, city.getId());
 
                 if ("ADD".equalsIgnoreCase(mode)) {
                     if (existing.isEmpty()) {
                         University newUniversity = new University();
-                        newUniversity.setName(name);
+                        newUniversity.setShortName(shortName);
+                        newUniversity.setFullName(fullName);
                         newUniversity.setType(type);
                         newUniversity.setAvgEgeScore(dto.getAvgEgeScore());
                         newUniversity.setCountryRanking(dto.getCountryRanking());
@@ -238,7 +271,8 @@ public class UniversityService {
                     }
                 } else {
                     University university = existing.orElseGet(University::new);
-                    university.setName(name);
+                    university.setShortName(shortName);
+                    university.setFullName(fullName);
                     university.setType(type);
                     university.setAvgEgeScore(dto.getAvgEgeScore());
                     university.setCountryRanking(dto.getCountryRanking());

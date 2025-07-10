@@ -7,8 +7,11 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UniversityCsvDTO {
-    @CsvBindByName(column = "name", required = true)
-    private String name;
+    @CsvBindByName(column = "short_name", required = true) // Новое поле
+    private String shortName;
+
+    @CsvBindByName(column = "full_name", required = true) // Новое поле
+    private String fullName;
 
     @CsvBindByName(column = "type", required = true)
     private String type;

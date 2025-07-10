@@ -7,15 +7,20 @@ import {
 
 const API_URL = '/api/universities';
 
-
 export const fetchUniversities = async (
+    nameQuery?: string,         // Новый параметр: строка запроса по названию
     regionId?: number | null,
     subjectIds?: number[],
-    specialtyIds?: number[], // Новый параметр
+    specialtyIds?: number[],
     minScore?: number | null,
     maxScore?: number | null
 ): Promise<UniversityResponse[]> => {
     const params = new URLSearchParams();
+
+    // Добавляем параметр nameQuery, если он есть
+    if (nameQuery) {
+        params.append('nameQuery', nameQuery);
+    }
 
     if (regionId) params.append('regionId', regionId.toString());
 
@@ -23,7 +28,6 @@ export const fetchUniversities = async (
         subjectIds.forEach(id => params.append('subjectIds', id.toString()));
     }
 
-    // Добавляем передачу specialtyIds
     if (specialtyIds && specialtyIds.length > 0) {
         specialtyIds.forEach(id => params.append('specialtyIds', id.toString()));
     }
@@ -35,6 +39,7 @@ export const fetchUniversities = async (
     return response.data;
 };
 
+// Остальные функции остаются без изменений
 export const getUniversityById = async (id: number): Promise<UniversityResponse> => {
     const response = await axios.get(`${API_URL}/${id}`);
     return response.data;

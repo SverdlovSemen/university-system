@@ -2,6 +2,7 @@ package com.unidata.university_system.mapper;
 
 import com.unidata.university_system.dto.UniversityRequest;
 import com.unidata.university_system.dto.UniversityResponse;
+import com.unidata.university_system.models.City;
 import com.unidata.university_system.models.University;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,11 +24,17 @@ public class UniversityMapper {
         if (request == null) return null;
         University university = new University();
         university.setId(request.id());
-        university.setName(request.name());
+        university.setShortName(request.shortName()); // Изменено
+        university.setFullName(request.fullName());   // Новое поле
         university.setType(request.type());
         university.setAvgEgeScore(request.avgEgeScore());
         university.setCountryRanking(request.countryRanking());
-        university.setCity(cityMapper.toCity(request.city()));
+
+        // Создаем временный объект City только с ID
+        City city = new City();
+        city.setId(request.cityId());
+        university.setCity(city);
+
         return university;
     }
 
@@ -35,7 +42,8 @@ public class UniversityMapper {
         if (university == null) return null;
         return new UniversityResponse(
                 university.getId(),
-                university.getName(),
+                university.getShortName(), // Изменено
+                university.getFullName(),  // Новое поле
                 university.getType(),
                 university.getAvgEgeScore(),
                 university.getCountryRanking(),
