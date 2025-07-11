@@ -11,16 +11,16 @@ import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 public class AssistantService {
-    @Value("${gigachat.api.oauth-url:https://ngw.devices.sberbank.ru:9443/api/v2/oauth}")
+    @Value("${gigachat.api.oauth-url}")
     private String oauthUrl;
 
-    @Value("${gigachat.api.url:https://gigachat.devices.sberbank.ru/api/v1/chat/completions}")
+    @Value("${gigachat.api.url}")
     private String gigaChatApiUrl;
 
     @Value("${gigachat.api.key}")
     private String authorizationKey;
 
-    @Value("${gigachat.api.scope:GIGACHAT_API_PERS}")
+    @Value("${gigachat.api.scope}")
     private String scope;
 
     private String accessToken;
@@ -41,19 +41,23 @@ public class AssistantService {
                     headers.set("RqUID", java.util.UUID.randomUUID().toString());
                     String body = "scope=" + scope;
                     HttpEntity<String> entity = new HttpEntity<>(body, headers);
+                    System.out.println("OAuth Request: URL=" + oauthUrl + ", Headers=" + headers + ", Body=" + body);
                     ResponseEntity<Map> response = restTemplate.postForEntity(oauthUrl, entity, Map.class);
+                    System.out.println("OAuth Response: Status=" + response.getStatusCode() + ", Body=" + response.getBody());
                     if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                         accessToken = (String) response.getBody().get("access_token");
                         Object expiresAtObj = response.getBody().get("expires_at");
                         if (expiresAtObj instanceof Number) {
-                            expiresAt = ((Number) expiresAtObj).longValue() / 1000 - 10; // небольшой запас
+                            expiresAt = ((Number) expiresAtObj).longValue() / 1000 - 10;
                         } else {
-                            expiresAt = now + 1700; // fallback: 28 минут
+                            expiresAt = now + 1700;
                         }
                     } else {
                         throw new RuntimeException("Не удалось получить access token GigaChat: " + response);
                     }
                 }
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to refresh GigaChat token: " + e.getMessage(), e);
             } finally {
                 tokenLock.unlock();
             }
@@ -67,9 +71,11 @@ public class AssistantService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", "Bearer " + accessToken);
-            String requestBody = "{\"model\":\"GigaChat\",\"messages\":[{\"role\":\"user\",\"content\":\"" + userQuery.replace("\"", "\\\"") + "\"}]}";
+            String requestBody = "{\"model\":\"GigaChat-Pro\",\"messages\":[{\"role\":\"user\",\"content\":\"" + userQuery.replace("\"", "\\\"") + "\"}]}";
             HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            System.out.println("GigaChat Request: URL=" + gigaChatApiUrl + ", Headers=" + headers + ", Body=" + requestBody);
             ResponseEntity<String> response = restTemplate.postForEntity(gigaChatApiUrl, entity, String.class);
+            System.out.println("GigaChat Response: Status=" + response.getStatusCode() + ", Body=" + response.getBody());
             if (response.getStatusCode().is2xxSuccessful()) {
                 return response.getBody();
             }
