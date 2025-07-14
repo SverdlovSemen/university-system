@@ -46,6 +46,7 @@ dependencies {
 	implementation("commons-io:commons-io:2.19.0") {
 		exclude(group = "commons-logging", module = "commons-logging")
 	}
+	implementation("com.github.jsqlparser:jsqlparser:5.3")
 }
 
 flyway {
