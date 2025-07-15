@@ -3,7 +3,10 @@ package com.unidata.university_system.models;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "faculty")
@@ -21,6 +24,12 @@ public class Faculty {
     @JoinColumn(name = "university_id", nullable = false)
     private University university;
 
-    @OneToMany(mappedBy = "faculty", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Specialty> specialties;
+    // Добавляем связь многие-ко-многим со специальностями
+    @ManyToMany
+    @JoinTable(
+            name = "faculty_specialty",
+            joinColumns = @JoinColumn(name = "faculty_id"),
+            inverseJoinColumns = @JoinColumn(name = "specialty_id")
+    )
+    private Set<Specialty> specialties = new HashSet<>();
 }

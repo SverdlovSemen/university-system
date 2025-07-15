@@ -4,6 +4,7 @@ import { Container, Card, Form, Button, Spinner, ListGroup, Alert, Row, Col, Bad
 import { fetchAllSubjects } from '../api/subjectApi';
 import { fetchSpecialtiesBySubjects } from '../api/specialtyApi';
 import { SubjectResponse, SpecialtyResponse } from '../types';
+import {useAuth} from "../hooks/useAuth";
 
 const SpecialtySearchPage = () => {
     const navigate = useNavigate();
@@ -12,6 +13,32 @@ const SpecialtySearchPage = () => {
     const [searchResults, setSearchResults] = useState<SpecialtyResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const {
+        isAuthenticated,
+        addFavoriteSpecialty,
+        removeFavoriteSpecialty,
+        user
+    } = useAuth();
+
+    // Функция для проверки, добавлена ли специальность в избранное
+    const isFavorite = (specialtyId: number) => {
+        return user?.favoriteSpecialties?.includes(specialtyId) || false;
+    };
+
+    const handleFavoriteClick = (specialtyId: number, e: React.MouseEvent) => {
+        e.stopPropagation(); // Предотвращаем переход по ссылке
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+
+        if (isFavorite(specialtyId)) {
+            removeFavoriteSpecialty(specialtyId);
+        } else {
+            addFavoriteSpecialty(specialtyId);
+        }
+    };
 
     useEffect(() => {
         const loadSubjects = async () => {
@@ -147,9 +174,21 @@ const SpecialtySearchPage = () => {
                                                     </div>
                                                     <p className="mb-0">{specialty.description}</p>
                                                 </div>
-                                                <Button variant="outline-primary" size="sm">
-                                                    Подробнее
-                                                </Button>
+                                                <div>
+                                                    {isAuthenticated && (
+                                                        <Button
+                                                            variant={isFavorite(specialty.id) ? "warning" : "outline-secondary"}
+                                                            size="sm"
+                                                            onClick={(e) => handleFavoriteClick(specialty.id, e)}
+                                                            className="me-2"
+                                                        >
+                                                            {isFavorite(specialty.id) ? '★' : '☆'}
+                                                        </Button>
+                                                    )}
+                                                    <Button variant="outline-primary" size="sm">
+                                                        Подробнее
+                                                    </Button>
+                                                </div>
                                             </div>
 
                                             <div className="mt-2">

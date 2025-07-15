@@ -11,13 +11,21 @@ export const searchSpecialties = async (query?: string): Promise<SpecialtyRespon
     return response.data;
 };
 
-export const fetchSpecialtiesByUniversity = async (universityId: number): Promise<SpecialtyResponse[]> => {
-    const response = await axios.get(`${API_URL}/university/${universityId}`);
+export const fetchSpecialtiesByUniversity = async (
+    universityId: number,
+    facultyId?: number
+): Promise<SpecialtyResponse[]> => {
+    const params: any = { universityId };
+    if (facultyId !== undefined) {
+        params.facultyId = facultyId;
+    }
+
+    const response = await axios.get(`${API_URL}/by-university`, { params });
     return response.data;
 };
 
 export const getSpecialtyById = async (id: number): Promise<SpecialtyResponse> => {
-    const response = await axios.get(`${API_URL}/${id}`);
+    const response = await axios.get(`/api/specialties/${id}`);
     return response.data;
 };
 

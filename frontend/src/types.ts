@@ -13,6 +13,8 @@ export interface RegionResponse {
 export interface FacultyResponse {
     id: number;
     name: string;
+    description: string;
+    university: UniversityResponse;
 }
 
 export interface UniversityResponse {
@@ -68,4 +70,12 @@ export interface UniversityRequest {
     avgEgeScore: number | null;
     countryRanking: number | null;
     cityId: number;
+}
+
+export interface User {
+    id: number;
+    username: string;
+    roles: string[];
+    favoriteUniversities: number[];
+    favoriteSpecialties: number[];
 }

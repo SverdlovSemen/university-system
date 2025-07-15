@@ -3,7 +3,10 @@ package com.unidata.university_system.models;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "specialty")
@@ -22,9 +25,8 @@ public class Specialty {
 
     private String description;
 
-    @ManyToOne
-    @JoinColumn(name = "faculty_id", nullable = false)
-    private Faculty faculty;
+    @ManyToMany(mappedBy = "specialties")
+    private Set<Faculty> faculties = new HashSet<>();
 
     @OneToMany(mappedBy = "specialty", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SubjectCombination> subjectCombinations;

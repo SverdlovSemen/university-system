@@ -6,5 +6,5 @@ public record UserResponse(
         Long id,
         String username,
         Boolean enabled,
-        Set<String> roles // Изменили на Set<String>
+        Set<String> roles
 ) {}

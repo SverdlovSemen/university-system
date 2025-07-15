@@ -14,7 +14,7 @@ public record SpecialtyRequest(
         String programCode,
         String description,
         @NotNull(message = "Faculty ID must be provided")
-        Long facultyId, // Заменили String faculty на Long facultyId
+        List<Long> facultyIds,
         List<SubjectCombinationRequest> subjectCombinations
 ) {
 }
