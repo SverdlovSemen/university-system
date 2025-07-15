@@ -38,7 +38,7 @@ const CustomNavbar = () => {
                                 <Button
                                     variant="outline-secondary"
                                     className="me-2"
-                                    onClick={() => navigate('/')}
+                                    onClick={() => navigate('/profile')} // Изменили
                                 >
                                     Профиль
                                 </Button>

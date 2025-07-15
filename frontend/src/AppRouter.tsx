@@ -7,8 +7,10 @@ import AdminDashboard from './pages/AdminDashboard';
 import EditorDashboard from './pages/EditorDashboard';
 import { useAuth } from './hooks/useAuth';
 import UniversityPage from './pages/UniversityPage';
-import SpecialtySearchPage from './pages/SpecialtySearchPage'; // Добавляем новый импорт
-import SpecialtyPage from './pages/SpecialtyPage'; // Добавляем новый импорт
+import SpecialtySearchPage from './pages/SpecialtySearchPage';
+import SpecialtyPage from './pages/SpecialtyPage';
+import UserProfilePage from "./pages/UserProfilePage";
+import FacultyPage from './pages/FacultyPage';
 
 const ProtectedRoute: React.FC<{
     children: React.ReactNode,
@@ -47,6 +49,17 @@ const AppRouter = () => {
             {/* Страницы аутентификации */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            {/* Страница факультета */}
+            <Route path="/faculty/:id" element={<FacultyPage />} />
+            {/*Профиль обычного пользователя*/}
+            <Route
+                path="/profile"
+                element={
+                    <ProtectedRoute>
+                        <UserProfilePage />
+                    </ProtectedRoute>
+                }
+            />
 
             {/* Защищенные маршруты */}
             <Route

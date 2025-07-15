@@ -7,7 +7,7 @@ public record SpecialtyResponse(
         String name,
         String programCode,
         String description,
-        Long facultyId, // Заменили FacultyResponse на Long, чтобы избежать рекурсии
+        List<Long> facultyIds,
         List<SubjectCombinationResponse> subjectCombinations
 ) {
 }

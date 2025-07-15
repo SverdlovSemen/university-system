@@ -4,6 +4,8 @@ import { Container, Card, Spinner, ListGroup, Button, Alert, Badge, Row, Col } f
 import { getSpecialtyById } from '../api/specialtyApi';
 import { fetchUniversitiesBySpecialty } from '../api/universityApi';
 import { SpecialtyResponse, UniversityResponse, SubjectResponse } from '../types';
+import { useAuth } from '../hooks/useAuth';
+
 
 const SpecialtyPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -12,6 +14,36 @@ const SpecialtyPage = () => {
     const [universities, setUniversities] = useState<UniversityResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const {
+        isAuthenticated,
+        addFavoriteSpecialty,
+        removeFavoriteSpecialty,
+        user
+    } = useAuth();
+    const [isFavorite, setIsFavorite] = useState(false);
+
+    useEffect(() => {
+        if (user && user.favoriteSpecialties && specialty) {
+            setIsFavorite(user.favoriteSpecialties.includes(specialty.id));
+        }
+    }, [user, specialty]);
+
+    const handleFavoriteClick = () => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+
+        if (!specialty) return;
+
+        if (isFavorite) {
+            removeFavoriteSpecialty(specialty.id);
+        } else {
+            addFavoriteSpecialty(specialty.id);
+        }
+        setIsFavorite(!isFavorite);
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -94,7 +126,17 @@ const SpecialtyPage = () => {
 
             <Card className="mb-4 border-primary">
                 <Card.Header className="bg-primary text-white">
-                    <Card.Title className="mb-0">{specialty.name}</Card.Title>
+                    <div className="d-flex justify-content-between align-items-center">
+                        <Card.Title className="mb-0">{specialty.name}</Card.Title>
+                        {isAuthenticated && (
+                            <Button
+                                variant={isFavorite ? "warning" : "outline-light"}
+                                onClick={handleFavoriteClick}
+                            >
+                                {isFavorite ? '★ В избранном' : '☆ Добавить в избранное'}
+                            </Button>
+                        )}
+                    </div>
                 </Card.Header>
                 <Card.Body>
                     <Row>

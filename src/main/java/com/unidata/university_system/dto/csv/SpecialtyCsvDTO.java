@@ -1,8 +1,11 @@
 package com.unidata.university_system.dto.csv;
 
+import com.opencsv.bean.CsvBindAndSplitByName;
 import com.opencsv.bean.CsvBindByName;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -19,6 +22,12 @@ public class SpecialtyCsvDTO {
     @CsvBindByName(column = "description")
     private String description;
 
-    @CsvBindByName(column = "faculty_id", required = true)
-    private Long facultyId;
+    // Изменяем на список ID факультетов
+    @CsvBindAndSplitByName(
+            column = "faculty_ids",
+            elementType = Long.class,
+            splitOn = ",",
+            required = true
+    )
+    private List<Long> facultyIds;
 }

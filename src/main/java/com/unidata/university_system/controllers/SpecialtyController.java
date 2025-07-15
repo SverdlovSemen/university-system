@@ -2,6 +2,7 @@ package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.SpecialtyRequest;
 import com.unidata.university_system.dto.SpecialtyResponse;
+import com.unidata.university_system.mapper.SpecialtyMapper;
 import com.unidata.university_system.models.Specialty;
 import com.unidata.university_system.services.SpecialtyService;
 import jakarta.validation.Valid;
@@ -17,8 +18,17 @@ import java.util.List;
 @RequestMapping("/api/specialties")
 public class SpecialtyController {
 
+    private final SpecialtyService specialtyService;
+    private final SpecialtyMapper specialtyMapper;
+
     @Autowired
-    private SpecialtyService specialtyService;
+    public SpecialtyController(
+            SpecialtyService specialtyService,
+            SpecialtyMapper specialtyMapper
+    ) {
+        this.specialtyService = specialtyService;
+        this.specialtyMapper = specialtyMapper;
+    }
 
     @GetMapping("/faculty/{facultyId}")
     public List<SpecialtyResponse> getSpecialtiesByFacultyId(@PathVariable Long facultyId) {
@@ -30,16 +40,28 @@ public class SpecialtyController {
         return specialtyService.getSpecialtiesByUniversity(universityId);
     }
 
+    @GetMapping("/by-university")
+    public ResponseEntity<List<SpecialtyResponse>> getSpecialtiesByUniversityAndFaculty(
+            @RequestParam Long universityId,
+            @RequestParam(required = false) Long facultyId) {
+
+        if (facultyId != null) {
+            return ResponseEntity.ok(specialtyService.getSpecialtiesByFaculty(facultyId));
+        } else {
+            return ResponseEntity.ok(specialtyService.getSpecialtiesByUniversity(universityId));
+        }
+    }
+
     @GetMapping("/search")
     public List<SpecialtyResponse> searchSpecialties(
             @RequestParam(required = false) Long universityId,
-            @RequestParam(required = false) String query, // Новый параметр
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) String level,
             @RequestParam(required = false) String form,
             @RequestParam(required = false) String subject) {
         return specialtyService.searchSpecialties(
                 universityId,
-                query, // Передаем в сервис
+                query,
                 level,
                 form,
                 subject
@@ -50,6 +72,12 @@ public class SpecialtyController {
     public List<SpecialtyResponse> getSpecialtiesBySubjects(
             @RequestParam List<Long> subjectIds) {
         return specialtyService.findSpecialtiesBySubjects(subjectIds);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<SpecialtyResponse> getSpecialtyById(@PathVariable Long id) {
+        SpecialtyResponse specialty = specialtyService.getSpecialtyByIdWithDetails(id);
+        return ResponseEntity.ok(specialty);
     }
 
     @PostMapping

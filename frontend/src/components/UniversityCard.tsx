@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Button } from 'react-bootstrap';
 import { UniversityResponse } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -9,33 +9,52 @@ interface UniversityCardProps {
 }
 
 const UniversityCard: React.FC<UniversityCardProps> = ({ university }) => {
-    const { isAuthenticated } = useAuth();
+    const {
+        isAuthenticated,
+        addFavoriteUniversity,
+        removeFavoriteUniversity,
+        user
+    } = useAuth();
     const navigate = useNavigate();
+    const [isFavorite, setIsFavorite] = useState(false);
+
+    useEffect(() => {
+        if (user && user.favoriteUniversities) {
+            setIsFavorite(user.favoriteUniversities.includes(university.id));
+        }
+    }, [user, university.id]);
 
     const handleDetailsClick = () => {
         navigate(`/university/${university.id}`);
     };
 
+    const handleFavoriteClick = () => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+
+        if (isFavorite) {
+            removeFavoriteUniversity(university.id);
+        } else {
+            addFavoriteUniversity(university.id);
+        }
+        setIsFavorite(!isFavorite);
+    };
+
     return (
         <Card className="h-100">
             <Card.Body>
-                {/* Основное название (сокращенное) */}
                 <Card.Title>{university.shortName}</Card.Title>
-
-                {/* Полное название (серым цветом, меньшим шрифтом) */}
                 <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.9rem' }}>
                     {university.fullName}
                 </Card.Subtitle>
-
-                {/* Город и регион */}
                 <Card.Text className="mb-1">
                     <strong>Город:</strong> {university.city.name}
                 </Card.Text>
                 <Card.Text className="mb-2">
                     <strong>Регион:</strong> {university.city.region.name}
                 </Card.Text>
-
-                {/* Дополнительная информация */}
                 <Card.Text>
                     <strong>Тип:</strong> {university.type}
                     <br />
@@ -54,8 +73,12 @@ const UniversityCard: React.FC<UniversityCardProps> = ({ university }) => {
                     </Button>
 
                     {isAuthenticated && (
-                        <Button variant="outline-secondary" size="sm">
-                            ★ В избранное
+                        <Button
+                            variant={isFavorite ? "warning" : "outline-secondary"}
+                            size="sm"
+                            onClick={handleFavoriteClick}
+                        >
+                            {isFavorite ? '★ В избранном' : '☆ В избранное'}
                         </Button>
                     )}
                 </div>
