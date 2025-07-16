@@ -1,9 +1,10 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import axios from 'axios';
-import { Button, Form, InputGroup, ListGroup, Card, FormSelect } from 'react-bootstrap';
+import axios, { AxiosError } from 'axios'; // Import AxiosError
+import { Button, Form, InputGroup, ListGroup, Card, FormSelect, Table, Badge, Alert } from 'react-bootstrap';
 import { FiMessageSquare, FiSend, FiX } from 'react-icons/fi';
 import { ResizableBox } from 'react-resizable';
+import { useNavigate } from 'react-router-dom';
 import 'react-resizable/css/styles.css';
 import './ChatWidget.css';
 
@@ -11,30 +12,31 @@ interface ChatMessage {
     user: string;
     response: {
         status: string;
-        data?: Array<{ [key: string]: any }>;
+        data?: Array<{ [key: string]: any } | string>;
         comment?: string;
         message?: string;
+        data_type?: string;
     };
 }
 
 const ChatWidget: React.FC = () => {
     const authContext = useContext(AuthContext);
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [message, setMessage] = useState('');
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [model, setModel] = useState('GigaChat-2-Pro');
+    const [visibleItems, setVisibleItems] = useState<{ [key: number]: number }>({});
     const chatBodyRef = useRef<HTMLDivElement>(null);
     const [size, setSize] = useState({ width: 350, height: 500 });
 
-    // Scroll to the latest message
     useEffect(() => {
         if (isOpen && chatBodyRef.current) {
             chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
         }
     }, [chatHistory, isOpen]);
 
-    // Load saved size from localStorage
     useEffect(() => {
         const savedSize = localStorage.getItem('chatSize');
         if (savedSize) {
@@ -65,10 +67,17 @@ const ChatWidget: React.FC = () => {
                         content: JSON.stringify({
                             sql: msg.response.data
                                 ? msg.response.data
-                                    .map((item) => Object.entries(item).reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {}))
+                                    .map((item) =>
+                                        typeof item === 'string'
+                                            ? item
+                                            : Object.entries(item)
+                                                .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+                                                .toString()
+                                    )
                                     .join('; ')
                                 : '',
                             comment: msg.response.comment || msg.response.message || 'Ответ от GigaChat',
+                            data_type: msg.response.data_type || '',
                         }),
                     },
                 ]).flat(),
@@ -88,13 +97,19 @@ const ChatWidget: React.FC = () => {
 
             setChatHistory([...chatHistory, { user: message, response: response.data }]);
             setMessage('');
+            setVisibleItems((prev) => ({ ...prev, [chatHistory.length]: 20 }));
         } catch (error) {
-            console.error('Error sending message:', error);
+            // Type error as AxiosError
+            const axiosError = error as AxiosError<{ message?: string }>;
+            console.error('Error sending message:', axiosError.response?.data || axiosError.message);
             setChatHistory([
                 ...chatHistory,
                 {
                     user: message,
-                    response: { status: 'error', message: 'Ошибка при отправке запроса к GigaChat.' },
+                    response: {
+                        status: 'error',
+                        message: axiosError.response?.data?.message || 'Ошибка при отправке запроса к GigaChat.',
+                    },
                 },
             ]);
         } finally {
@@ -102,9 +117,253 @@ const ChatWidget: React.FC = () => {
         }
     };
 
-    const handleResize = (event: any, { size }: { size: { width: number; height: number } }) => {
-        setSize(size);
-        localStorage.setItem('chatSize', JSON.stringify(size));
+    const handleShowMore = (index: number) => {
+        setVisibleItems((prev) => ({
+            ...prev,
+            [index]: (prev[index] || 20) + 20,
+        }));
+    };
+
+    const renderResponse = (response: ChatMessage['response'], index: number) => {
+        if (response.status === 'error') {
+            return <Alert variant="danger">{response.message || 'Ошибка при получении ответа.'}</Alert>;
+        }
+
+        if (!response.data || !response.data_type) {
+            return <p>{response.comment || 'Нет данных для отображения.'}</p>;
+        }
+
+        switch (response.data_type) {
+            case 'regions':
+            case 'cities':
+            case 'faculties':
+            case 'subjects':
+                return (
+                    <div>
+                        <p>
+                            <strong>
+                                {response.data_type === 'regions'
+                                    ? 'Регионы'
+                                    : response.data_type === 'cities'
+                                        ? 'Города'
+                                        : response.data_type === 'faculties'
+                                            ? 'Факультеты'
+                                            : 'Предметы'}
+                                :
+                            </strong>
+                        </p>
+                        <ul>
+                            {(response.data as string[])
+                                .slice(0, visibleItems[index] || 20)
+                                .map((item: string, i: number) => (
+                                    <li key={i}>{item}</li>
+                                ))}
+                        </ul>
+                        {response.data.length > (visibleItems[index] || 20) && (
+                            <Button
+                                variant="outline-primary"
+                                size="sm"
+                                className="show-more-btn"
+                                onClick={() => handleShowMore(index)}
+                            >
+                                Показать ещё
+                            </Button>
+                        )}
+                        {response.comment && <p className="mt-2">{response.comment}</p>}
+                    </div>
+                );
+            case 'universities':
+            case 'favorite_universities':
+                return (
+                    <div>
+                        <p>
+                            <strong>{response.data_type === 'universities' ? 'Вузы' : 'Избранные вузы'}:</strong>
+                        </p>
+                        {response.data.length === 0 ? (
+                            <p>У вас нет избранных вузов.</p>
+                        ) : (
+                            <Table striped bordered hover className="chat-table">
+                                <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Проходной балл</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {(response.data as Array<{ short_name: string; full_name: string; avg_ege_score: number }>)
+                                    .slice(0, visibleItems[index] || 20)
+                                    .map((uni, i) => (
+                                        <tr key={i}>
+                                            <td>
+                                                <a
+                                                    href={`/university/${uni.short_name}`}
+                                                    style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        navigate(`/university/${uni.short_name}`);
+                                                    }}
+                                                >
+                                                    {uni.full_name} ({uni.short_name})
+                                                </a>
+                                            </td>
+                                            <td>{uni.avg_ege_score}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </Table>
+                        )}
+                        {response.data.length > (visibleItems[index] || 20) && (
+                            <Button
+                                variant="outline-primary"
+                                size="sm"
+                                className="show-more-btn"
+                                onClick={() => handleShowMore(index)}
+                            >
+                                Показать ещё
+                            </Button>
+                        )}
+                        {response.comment && <p className="mt-2">{response.comment}</p>}
+                    </div>
+                );
+            case 'specialties':
+            case 'favorite_specialties':
+            case 'faculty_specialties':
+                return (
+                    <div>
+                        <p>
+                            <strong>
+                                {response.data_type === 'specialties'
+                                    ? 'Специальности'
+                                    : response.data_type === 'favorite_specialties'
+                                        ? 'Избранные специальности'
+                                        : 'Специальности факультета'}
+                                :
+                            </strong>
+                        </p>
+                        {response.data.length === 0 ? (
+                            <p>У вас нет избранных специальностей.</p>
+                        ) : (
+                            <ListGroup>
+                                {(response.data as Array<{ name: string; program_code: string; description: string }>)
+                                    .slice(0, visibleItems[index] || 20)
+                                    .map((specialty, i) => (
+                                        <ListGroup.Item key={i}>
+                                            <strong>{specialty.name}</strong> (Код: {specialty.program_code})<br />
+                                            {specialty.description}
+                                        </ListGroup.Item>
+                                    ))}
+                            </ListGroup>
+                        )}
+                        {response.data.length > (visibleItems[index] || 20) && (
+                            <Button
+                                variant="outline-primary"
+                                size="sm"
+                                className="show-more-btn"
+                                onClick={() => handleShowMore(index)}
+                            >
+                                Показать ещё
+                            </Button>
+                        )}
+                        {response.comment && <p className="mt-2">{response.comment}</p>}
+                    </div>
+                );
+            case 'subject_combinations':
+                return (
+                    <div>
+                        <p><strong>Комбинации предметов:</strong></p>
+                        <ListGroup>
+                            {(response.data as Array<{ combination_id: number; subjects: string[] }>)
+                                .slice(0, visibleItems[index] || 20)
+                                .map((combo, i) => (
+                                    <ListGroup.Item key={i}>
+                                        Комбинация #{combo.combination_id}: {combo.subjects.join(', ')}
+                                    </ListGroup.Item>
+                                ))}
+                        </ListGroup>
+                        {response.data.length > (visibleItems[index] || 20) && (
+                            <Button
+                                variant="outline-primary"
+                                size="sm"
+                                className="show-more-btn"
+                                onClick={() => handleShowMore(index)}
+                            >
+                                Показать ещё
+                            </Button>
+                        )}
+                        {response.comment && <p className="mt-2">{response.comment}</p>}
+                    </div>
+                );
+            case 'specialty_subjects':
+                return (
+                    <div>
+                        <p><strong>Специальности и их предметы:</strong></p>
+                        <Table striped bordered hover className="chat-table">
+                            <thead>
+                            <tr>
+                                <th>Специальность</th>
+                                <th>Требуемые предметы</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {(response.data as Array<{ name: string; program_code: string; required_subjects: string[] }>)
+                                .slice(0, visibleItems[index] || 20)
+                                .map((specialty, i) => (
+                                    <tr key={i}>
+                                        <td>
+                                            <a
+                                                href={`/specialty/${specialty.name.replace(/\s+/g, '-')}`}
+                                                style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    navigate(`/specialty/${specialty.name.replace(/\s+/g, '-')}`);
+                                                }}
+                                            >
+                                                {specialty.name} (Код: {specialty.program_code})
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {specialty.required_subjects.map((subject: string, j: number) => (
+                                                <Badge key={j} bg="info" className="me-1">
+                                                    {subject}
+                                                </Badge>
+                                            ))}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                        {response.data.length > (visibleItems[index] || 20) && (
+                            <Button
+                                variant="outline-primary"
+                                size="sm"
+                                className="show-more-btn"
+                                onClick={() => handleShowMore(index)}
+                            >
+                                Показать ещё
+                            </Button>
+                        )}
+                        {response.comment && <p className="mt-2">{response.comment}</p>}
+                    </div>
+                );
+            default:
+                return (
+                    <ul>
+                        {(response.data as Array<string | { [key: string]: any }>).map((item, i) => (
+                            <li key={i}>
+                                {typeof item === 'string' ? (
+                                    item
+                                ) : (
+                                    Object.entries(item).map(([key, value]) => (
+                                        <span key={key}>
+                                            {key}: {String(value)};{' '}
+                                        </span>
+                                    ))
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                );
+        }
     };
 
     return (
@@ -157,25 +416,7 @@ const ChatWidget: React.FC = () => {
                                             <strong>Вы:</strong> {msg.user}
                                         </div>
                                         <div className="bot-response">
-                                            <strong>GigaChat:</strong>{' '}
-                                            {msg.response.status === 'success' && msg.response.data ? (
-                                                <>
-                                                    <ul>
-                                                        {msg.response.data.map((item, i) => (
-                                                            <li key={i}>
-                                                                {Object.entries(item).map(([key, value]) => (
-                                                                    <span key={key}>
-                                    {key}: {value};{' '}
-                                  </span>
-                                                                ))}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                    {msg.response.comment && <p>{msg.response.comment}</p>}
-                                                </>
-                                            ) : (
-                                                <p>{msg.response.message || 'Ошибка при получении ответа.'}</p>
-                                            )}
+                                            <strong>GigaChat:</strong> {renderResponse(msg.response, index)}
                                         </div>
                                     </div>
                                 ))}
