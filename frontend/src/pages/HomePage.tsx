@@ -7,7 +7,7 @@ const HomePage = () => {
 
     return (
         <div className="container mt-4">
-            <h1>Добро пожаловать, {user?.username}!</h1>
+            <h1>Добро пожаловать, {user?.firstName}!</h1>
             <p>Это главная страница приложения University System.</p>
 
             <Button variant="danger" onClick={logout}>

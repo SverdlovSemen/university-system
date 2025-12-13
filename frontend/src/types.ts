@@ -74,8 +74,15 @@ export interface UniversityRequest {
 
 export interface User {
     id: number;
-    username: string;
+    email: string;
+    firstName: string;
     roles: string[];
     favoriteUniversities: number[];
     favoriteSpecialties: number[];
+}
+
+export interface RegisterRequest {
+    email: string;
+    firstName: string;
+    password: string;
 }

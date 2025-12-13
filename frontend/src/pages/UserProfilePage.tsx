@@ -126,7 +126,7 @@ const UserProfilePage = () => {
                 <Card.Body>
                     <Row>
                         <Col md={8}>
-                            <Card.Title>Привет, {user.username}!</Card.Title>
+                            <Card.Title>Привет, {user.firstName}!</Card.Title>
                             <Card.Text>
                                 Это ваша личная страница, где вы можете просматривать избранные университеты и специальности.
                             </Card.Text>

@@ -4,7 +4,7 @@ module.exports = function(app) {
     app.use(
         '/api',
         createProxyMiddleware({
-            target: 'http://localhost:8080', // Адрес вашего Spring Boot сервера
+            target: 'http://localhost:8080',
             changeOrigin: true,
         })
     );

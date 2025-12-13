@@ -93,7 +93,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return status != null && !"Заблокирован".equals(status.getName());
+        return status != null && !"BLOCKED".equals(status.getName());
     }
 
     @Override
@@ -103,6 +103,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return status != null && "Активен".equals(status.getName());
+        return status != null && "ACTIVE".equals(status.getName());
     }
 }

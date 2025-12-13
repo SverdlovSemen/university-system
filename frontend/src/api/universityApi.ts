@@ -7,6 +7,8 @@ import {
 
 const API_URL = '/api/universities';
 
+
+
 export const fetchUniversities = async (
     nameQuery?: string,         // Новый параметр: строка запроса по названию
     regionId?: number | null,

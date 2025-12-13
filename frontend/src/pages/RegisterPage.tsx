@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { Button, Form, Container, Card, Alert } from 'react-bootstrap';
 
 const RegisterPage = () => {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
+    const [firstName, setFirstName] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
-    const { register } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -20,11 +19,33 @@ const RegisterPage = () => {
             return;
         }
 
+        if (!email.includes('@')) {
+            setError('Введите корректный email');
+            return;
+        }
+
         try {
-            await register(username, password);
-            navigate('/');
+            const response = await fetch('http://localhost:8080/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    firstName: firstName,
+                    password: password
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Ошибка регистрации');
+            }
+
+            const data = await response.json();
+            navigate('/login', { state: { message: 'Регистрация успешна! Теперь войдите.' } });
         } catch (err: any) {
-            setError(err.message || 'Ошибка регистрации');
+            setError(err.message || 'Ошибка регистрации. Возможно, такой email уже существует.');
         }
     };
 
@@ -38,17 +59,29 @@ const RegisterPage = () => {
 
                     <Form onSubmit={handleSubmit}>
                         <Form.Group className="mb-3">
-                            <Form.Label>Имя пользователя</Form.Label>
+                            <Form.Label>Email *</Form.Label>
                             <Form.Control
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="example@mail.com"
                                 required
                             />
                         </Form.Group>
 
                         <Form.Group className="mb-3">
-                            <Form.Label>Пароль</Form.Label>
+                            <Form.Label>Имя *</Form.Label>
+                            <Form.Control
+                                type="text"
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                placeholder="Ваше имя"
+                                required
+                            />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Пароль *</Form.Label>
                             <Form.Control
                                 type="password"
                                 value={password}
@@ -58,7 +91,7 @@ const RegisterPage = () => {
                         </Form.Group>
 
                         <Form.Group className="mb-3">
-                            <Form.Label>Подтвердите пароль</Form.Label>
+                            <Form.Label>Подтверждение пароля *</Form.Label>
                             <Form.Control
                                 type="password"
                                 value={confirmPassword}

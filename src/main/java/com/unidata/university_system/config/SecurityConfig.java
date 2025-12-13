@@ -62,6 +62,7 @@ public class SecurityConfig {
                         // ROLE_USER endpoints
                         .requestMatchers(HttpMethod.GET, "/api/universities/analytics/**").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/api/assistant/query").hasRole("USER")
+                        .requestMatchers("/api/auth/profile").authenticated()
 
                         // ROLE_ADMIN endpoints
                         .requestMatchers(HttpMethod.POST, "/api/universities").hasRole("ADMIN")

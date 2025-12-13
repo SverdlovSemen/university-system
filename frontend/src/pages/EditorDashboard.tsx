@@ -10,7 +10,7 @@ const EditorDashboard = () => {
             <Card>
                 <Card.Header as="h5">Панель редактора</Card.Header>
                 <Card.Body>
-                    <Card.Title>Добро пожаловать, {user?.username}!</Card.Title>
+                    <Card.Title>Добро пожаловать, {user?.firstName}!</Card.Title>
                     <Card.Text>
                         Здесь вы можете управлять информацией о вашем университете.
                     </Card.Text>

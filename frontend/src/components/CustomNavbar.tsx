@@ -33,7 +33,7 @@ const CustomNavbar = () => {
                         {isAuthenticated ? (
                             <>
                                 <Navbar.Text className="me-3">
-                                    Привет, {user?.username}!
+                                    Привет, {user?.firstName}!
                                 </Navbar.Text>
                                 <Button
                                     variant="outline-secondary"

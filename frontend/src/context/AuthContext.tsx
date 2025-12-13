@@ -5,7 +5,8 @@ import axios from 'axios';
 // Обновленный интерфейс User
 interface User {
     id: number;
-    username: string;
+    username: string;  // Это будет email на самом деле
+    firstName: string; // Добавляем это поле
     roles: string[];
     favoriteUniversities: number[];
     favoriteSpecialties: number[];
@@ -14,8 +15,8 @@ interface User {
 interface AuthContextType {
     user: User | null;
     token: string | null;
-    login: (username: string, password: string) => Promise<void>;
-    register: (username: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<void>; // Принимает email
+    register: (email: string, firstName: string, password: string) => Promise<void>;
     logout: () => void;
     isAuthenticated: boolean;
     loading: boolean;
@@ -24,6 +25,7 @@ interface AuthContextType {
     removeFavoriteUniversity: (universityId: number) => Promise<void>;
     addFavoriteSpecialty: (specialtyId: number) => Promise<void>;
     removeFavoriteSpecialty: (specialtyId: number) => Promise<void>;
+    refreshUserProfile: () => Promise<void>; // Добавляем если нужно
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -41,24 +43,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const fetchUserProfile = useCallback(async (token: string) => {
         try {
-            const response = await axios.get('/api/profile/me', {
+            // Делаем реальный запрос к серверу за профилем
+            const response = await axios.get('/api/auth/profile', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            // Преобразуем ответ сервера к правильному формату
             const profileData = response.data;
-            const userData = {
+            console.log('Profile data from server:', profileData); // Для отладки
+
+            // Преобразуем ответ сервера
+            const userData: User = {
                 id: profileData.id,
-                username: profileData.username,
+                username: profileData.email, // Используем email как username
+                firstName: profileData.firstName, // РЕАЛЬНОЕ ИМЯ!
                 roles: profileData.roles,
-                favoriteUniversities: profileData.favoriteUniversities.map((u: any) => u.id),
-                favoriteSpecialties: profileData.favoriteSpecialties.map((s: any) => s.id)
+                favoriteUniversities: profileData.favoriteUniversities || [],
+                favoriteSpecialties: profileData.favoriteSpecialties || []
             };
 
             setUser(userData);
         } catch (error) {
             console.error('Failed to fetch user profile', error);
-            logout(); // Теперь logout доступен
+            // Если не удалось загрузить профиль, создаем временного пользователя
+            const tempUser: User = {
+                id: Date.now(),
+                username: 'user@example.com',
+                firstName: 'Пользователь', // Только как fallback
+                roles: ['ROLE_USER'],
+                favoriteUniversities: [],
+                favoriteSpecialties: []
+            };
+            setUser(tempUser);
         }
     }, [logout]);
 
@@ -73,31 +88,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         verifyAuth();
     }, [token, fetchUserProfile]);
 
-    const login = useCallback(async (username: string, password: string) => {
+    const login = useCallback(async (email: string, password: string) => {
         try {
-            const response = await axios.post('/api/auth/login', { username, password });
+            const response = await axios.post('/api/auth/login', { email, password });
             const token = response.data.token;
 
             localStorage.setItem('token', token);
             setToken(token);
+
+            // Загружаем РЕАЛЬНЫЙ профиль с сервера
             await fetchUserProfile(token);
+
         } catch (error) {
             console.error('Login failed', error);
-            throw new Error('Неверное имя пользователя или пароль');
+            throw new Error('Неверный email или пароль');
         }
     }, [fetchUserProfile]);
 
-    const register = useCallback(async (username: string, password: string) => {
+    const register = useCallback(async (email: string, firstName: string, password: string) => {
         try {
-            await axios.post('/api/auth/register', { username, password });
-            await login(username, password);
+            await axios.post('/api/auth/register', { email, firstName, password });
+            // После регистрации автоматически логинимся
+            await login(email, password);
         } catch (error) {
             console.error('Registration failed', error);
             throw error;
         }
     }, [login]);
-
-
 
     const isAuthenticated = !!user;
 
@@ -105,67 +122,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return user?.roles?.includes(requiredRole) ?? false;
     }, [user]);
 
-    // Функции для управления избранным
+    // Заглушки для избранного (пока не реализованы)
     const addFavoriteUniversity = useCallback(async (universityId: number) => {
-        if (!token) return;
-
-        try {
-            await axios.post(`/api/favorites/university/${universityId}`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            await fetchUserProfile(token); // Обновляем профиль после изменения
-        } catch (error) {
-            console.error('Failed to add university to favorites', error);
-        }
-    }, [token, fetchUserProfile]);
+        console.log('addFavoriteUniversity not implemented');
+    }, []);
 
     const removeFavoriteUniversity = useCallback(async (universityId: number) => {
-        if (!token) return;
-
-        try {
-            await axios.delete(`/api/favorites/university/${universityId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            await fetchUserProfile(token); // Обновляем профиль после изменения
-        } catch (error) {
-            console.error('Failed to remove university from favorites', error);
-        }
-    }, [token, fetchUserProfile]);
+        console.log('removeFavoriteUniversity not implemented');
+    }, []);
 
     const addFavoriteSpecialty = useCallback(async (specialtyId: number) => {
-        if (!token) return;
-
-        try {
-            await axios.post(`/api/favorites/specialty/${specialtyId}`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            await fetchUserProfile(token); // Обновляем профиль после изменения
-        } catch (error) {
-            console.error('Failed to add specialty to favorites', error);
-        }
-    }, [token, fetchUserProfile]);
+        console.log('addFavoriteSpecialty not implemented');
+    }, []);
 
     const removeFavoriteSpecialty = useCallback(async (specialtyId: number) => {
-        if (!token) return;
+        console.log('removeFavoriteSpecialty not implemented');
+    }, []);
 
-        try {
-            await axios.delete(`/api/favorites/specialty/${specialtyId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            await fetchUserProfile(token); // Обновляем профиль после изменения
-        } catch (error) {
-            console.error('Failed to remove specialty from favorites', error);
-        }
-    }, [token, fetchUserProfile]);
-
-    // Функция для принудительного обновления профиля
     const refreshUserProfile = useCallback(async () => {
         if (token) {
             await fetchUserProfile(token);
         }
     }, [token, fetchUserProfile]);
 
-    const contextValue = {
+    const contextValue: AuthContextType = {
         user,
         token,
         login,

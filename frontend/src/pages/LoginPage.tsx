@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Button, Form, Container, Card, Alert } from 'react-bootstrap';
 
 const LoginPage = () => {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState(''); // Изменено с username на email
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const { login } = useAuth();
@@ -15,8 +15,7 @@ const LoginPage = () => {
         setError('');
 
         try {
-            await login(username, password);
-            // Перенаправляем на главную страницу (SearchPage)
+            await login(email, password); // Передаем email вместо username
             navigate('/');
         } catch (err) {
             setError('Неверное имя пользователя или пароль');
@@ -33,11 +32,11 @@ const LoginPage = () => {
 
                     <Form onSubmit={handleSubmit}>
                         <Form.Group className="mb-3">
-                            <Form.Label>Имя пользователя</Form.Label>
+                            <Form.Label>Email</Form.Label> {/* Изменено с "Имя пользователя" */}
                             <Form.Control
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                type="email" // Изменено с text на email
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 required
                             />
                         </Form.Group>
