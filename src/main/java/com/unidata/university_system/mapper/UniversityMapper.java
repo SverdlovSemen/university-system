@@ -24,16 +24,22 @@ public class UniversityMapper {
         if (request == null) return null;
         University university = new University();
         university.setId(request.id());
-        university.setShortName(request.shortName()); // Изменено
-        university.setFullName(request.fullName());   // Новое поле
+        university.setFullName(request.fullName());
+        university.setAbbreviation(request.abbreviation());
         university.setType(request.type());
-        university.setAvgEgeScore(request.avgEgeScore());
-        university.setCountryRanking(request.countryRanking());
+        university.setOwnershipType(request.ownershipType());
+        university.setFoundedYear(request.foundedYear());
+        university.setWebsite(request.website());
+        university.setAdminEmail(request.adminEmail());
+        university.setAdminPhone(request.adminPhone());
+        university.setAccreditationNumber(request.accreditationNumber());
+        university.setAccreditationExpiryDate(request.accreditationExpiryDate());
 
-        // Создаем временный объект City только с ID
-        City city = new City();
-        city.setId(request.cityId());
-        university.setCity(city);
+        if (request.cityId() != null) {
+            City city = new City();
+            city.setId(request.cityId());
+            university.setCity(city);
+        }
 
         return university;
     }
@@ -42,12 +48,18 @@ public class UniversityMapper {
         if (university == null) return null;
         return new UniversityResponse(
                 university.getId(),
-                university.getShortName(), // Изменено
-                university.getFullName(),  // Новое поле
+                university.getFullName(),
+                university.getAbbreviation(),
                 university.getType(),
-                university.getAvgEgeScore(),
-                university.getCountryRanking(),
-                cityMapper.fromCity(university.getCity()),
+                university.getOwnershipType(),
+                university.getCity() != null ? cityMapper.fromCity(university.getCity()) : null,
+                university.getFoundedYear(),
+                university.getWebsite(),
+                university.getAdminEmail(),
+                university.getAdminPhone(),
+                university.getAccreditationNumber(),
+                university.getAccreditationExpiryDate(),
+                university.getStatus() != null ? university.getStatus().getName() : null,
                 university.getFaculties() != null ?
                         facultyMapper.fromFacultyList(university.getFaculties()) : null
         );

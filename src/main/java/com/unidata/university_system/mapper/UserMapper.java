@@ -3,9 +3,9 @@ package com.unidata.university_system.mapper;
 import com.unidata.university_system.dto.UserRequest;
 import com.unidata.university_system.dto.UserResponse;
 import com.unidata.university_system.models.User;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,20 +13,15 @@ import java.util.stream.Collectors;
 @Service
 public class UserMapper {
 
-    @Autowired
-    private RoleMapper roleMapper;
-
     public User toUser(UserRequest request) {
         if (request == null) return null;
         User user = new User();
         user.setId(request.id());
-        user.setUsername(request.username());
+        user.setEmail(request.email());
         user.setPassword(request.password());
-        user.setEnabled(request.enabled());
-        user.setRoles(request.roles() != null ?
-                request.roles().stream()
-                        .map(roleMapper::toRole)
-                        .collect(Collectors.toSet()) : Collections.emptySet());
+        user.setFirstName(request.firstName());
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
         return user;
     }
 
@@ -34,14 +29,11 @@ public class UserMapper {
         if (user == null) return null;
         return new UserResponse(
                 user.getId(),
-                user.getUsername(),
-                user.isEnabled(),
-                user.getRoles() != null ?
-                        user.getRoles().stream()
-                                // ИЗМЕНЕНИЕ ЗДЕСЬ: преобразуем в Set<String> вместо Set<RoleResponse>
-                                .map(role -> role.getRoleName()) // Просто получаем имя роли
-                                .collect(Collectors.toSet()) :
-                        Collections.emptySet() // Возвращаем пустой Set вместо null
+                user.getEmail(),
+                user.getFirstName(),
+                user.getRole() != null ? user.getRole().getName() : null,
+                user.getStatus() != null ? user.getStatus().getName() : null,
+                user.isEnabled()
         );
     }
 

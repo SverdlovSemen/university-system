@@ -40,46 +40,47 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
-        log.info("Login attempt for user: {}", request.username()); // Логируем попытку входа
+        log.info("Login attempt for user: {}", request.email());
 
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.username(),
+                            request.email(),
                             request.password()
                     )
             );
 
             User user = (User) authentication.getPrincipal();
-            log.info("User authenticated: {}", user.getUsername()); // Логируем успешную аутентификацию
+            log.info("User authenticated: {}", user.getEmail());
 
             String token = jwtService.generateToken(user);
             return ResponseEntity.ok(new AuthResponse(token));
         } catch (Exception e) {
-            log.error("Authentication failed for user: {}", request.username(), e); // Логируем ошибку
+            log.error("Authentication failed for user: {}", request.email(), e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new AuthResponse(null, "Invalid username or password"));
+                    .body(new AuthResponse(null, "Invalid email or password"));
         }
     }
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-        if (userRepository.existsByUsername(request.username())) {
+        if (userRepository.existsByEmail(request.email())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new AuthResponse(null, "Username already exists"));
+                    .body(new AuthResponse(null, "Email already exists"));
         }
 
         User user = new User();
-        user.setUsername(request.username());
+        user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
-        user.setEnabled(true);
+        user.setFirstName(request.firstName());
+        user.setCreatedAt(java.time.LocalDateTime.now());
 
-        Optional<Role> userRole = roleRepository.findByRoleName("ROLE_USER");
+        Optional<Role> userRole = roleRepository.findByName("Пользователь");
         if (userRole.isEmpty()) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new AuthResponse(null, "Default role 'ROLE_USER' not found"));
+                    .body(new AuthResponse(null, "Default role 'Пользователь' not found"));
         }
-        user.setRoles(Collections.singleton(userRole.get()));
+        user.setRole(userRole.get());
 
         userRepository.save(user);
         String token = jwtService.generateToken(user);
@@ -88,16 +89,15 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(Authentication authentication) {
         User user = (User) authentication.getPrincipal();
-        Set<String> roleNames = user.getRoles().stream()
-                .map(Role::getRoleName)
-                .collect(Collectors.toSet());
-
-        return ResponseEntity.ok(new UserResponse(
+        UserResponse response = new UserResponse(
                 user.getId(),
-                user.getUsername(),
-                user.isEnabled(),
-                roleNames
-        ));
+                user.getEmail(),
+                user.getFirstName(),
+                user.getRole() != null ? user.getRole().getName() : null,
+                user.getStatus() != null ? user.getStatus().getName() : null,
+                user.isEnabled()
+        );
+        return ResponseEntity.ok(response);
     }
 
 }

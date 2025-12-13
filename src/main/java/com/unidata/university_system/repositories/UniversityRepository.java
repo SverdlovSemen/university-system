@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface UniversityRepository extends JpaRepository<University, Long> {
     // Поиск по названию (частичное совпадение, регистр не важен)
-    List<University> findByShortNameContainingIgnoreCase(String shortName);
+    List<University> findByAbbreviationContainingIgnoreCase(String abbreviation);
 
 
 
@@ -26,7 +26,7 @@ public interface UniversityRepository extends JpaRepository<University, Long> {
     // Комбинированный поиск
     @Query("SELECT u FROM University u WHERE " +
             "(:query IS NULL OR " +
-            "   LOWER(u.shortName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "   LOWER(u.abbreviation) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "   LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
             "(:region IS NULL OR u.city.region.name = :region) AND " +
             "(:type IS NULL OR u.type = :type)")
@@ -36,31 +36,29 @@ public interface UniversityRepository extends JpaRepository<University, Long> {
             @Param("type") String type
     );
 
-    // Поиск университетов по специальности
+    // Поиск университетов по специальности (обновлено под новую схему)
     @Query("SELECT DISTINCT u FROM University u " +
             "JOIN u.faculties f " +
-            "JOIN f.specialties s " +
-            "WHERE (:specialtyIds IS NULL OR s.id IN :specialtyIds) " +
-            "ORDER BY u.countryRanking ASC")
+            "JOIN f.programs p " +
+            "JOIN p.specialization s " +
+            "WHERE (:specialtyIds IS NULL OR s.id IN :specialtyIds)")
     List<University> findBySpecialties(@Param("specialtyIds") List<Long> specialtyIds);
 
-    Optional<University> findByShortNameIgnoreCaseAndCityId(String shortName, Long cityId);
+    Optional<University> findByAbbreviationIgnoreCaseAndCityId(String abbreviation, Long cityId);
 
     //Поиск с фильтрами
 
     @Query("SELECT DISTINCT u FROM University u " +
             "LEFT JOIN u.faculties f " +
-            "LEFT JOIN f.specialties s " +
+            "LEFT JOIN f.programs p " +
+            "LEFT JOIN p.specialization s " +
             "WHERE " +
             "(:query IS NULL OR " +
-            "   LOWER(u.shortName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "   LOWER(u.abbreviation) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "   LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))) " +
             "AND (:regionId IS NULL OR u.city.region.id = :regionId) " +
             "AND (:type IS NULL OR u.type = :type) " +
-            "AND (:minScore IS NULL OR u.avgEgeScore >= :minScore) " +
-            "AND (:maxScore IS NULL OR u.avgEgeScore <= :maxScore) " +
-            "AND (:specialtyIds IS NULL OR s.id IN :specialtyIds) " +
-            "ORDER BY u.countryRanking ASC")
+            "AND (:specialtyIds IS NULL OR s.id IN :specialtyIds)")
     List<University> searchWithFilters(
             @Param("query") String query,
             @Param("regionId") Long regionId,

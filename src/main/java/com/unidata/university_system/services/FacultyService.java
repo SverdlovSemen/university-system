@@ -97,7 +97,7 @@ public class FacultyService {
                     faculty = facultyRepository.findById(dto.getId())
                             .orElseThrow(() -> new IllegalArgumentException("Faculty with ID " + dto.getId() + " not found"));
                 }
-                faculty.setName(dto.getName());
+                faculty.setFullName(dto.getName());
                 faculty.setUniversity(university);
                 savedFaculties.add(facultyRepository.save(faculty));
             }

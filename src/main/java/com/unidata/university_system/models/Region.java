@@ -3,10 +3,11 @@ package com.unidata.university_system.models;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "region")
+@Table(name = "regions")
 @Getter
 @Setter
 public class Region {
@@ -14,11 +15,11 @@ public class Region {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", unique = true, nullable = false)
     private String name;
 
     @OneToMany(mappedBy = "region", cascade = CascadeType.ALL)
-    private List<City> cities;
+    private List<City> cities = new ArrayList<>();
 
     public Region() {}
 

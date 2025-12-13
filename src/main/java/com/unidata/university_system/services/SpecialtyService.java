@@ -4,13 +4,22 @@ import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import com.unidata.university_system.dto.SpecialtyRequest;
 import com.unidata.university_system.dto.SpecialtyResponse;
+import com.unidata.university_system.dto.SubjectRequest;
+import com.unidata.university_system.dto.SubjectCombinationResponse;
 import com.unidata.university_system.dto.csv.SpecialtyCsvDTO;
 import com.unidata.university_system.mapper.SpecialtyMapper;
+import com.unidata.university_system.mapper.SubjectCombinationMapper;
+import com.unidata.university_system.models.EducationLevel;
 import com.unidata.university_system.models.Faculty;
+import com.unidata.university_system.models.Program;
+import com.unidata.university_system.models.SpecializationSubject;
 import com.unidata.university_system.models.Specialty;
 import com.unidata.university_system.models.Subject;
-import com.unidata.university_system.repositories.FacultyRepository;
+import com.unidata.university_system.repositories.EducationLevelRepository;
+import com.unidata.university_system.repositories.ProgramRepository;
+import com.unidata.university_system.repositories.SpecializationSubjectRepository;
 import com.unidata.university_system.repositories.SpecialtyRepository;
+import com.unidata.university_system.repositories.SubjectRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,18 +37,30 @@ import java.util.stream.Collectors;
 public class SpecialtyService {
 
     private final SpecialtyRepository specialtyRepository;
-    private final FacultyRepository facultyRepository;
+    private final ProgramRepository programRepository;
+    private final SpecializationSubjectRepository specializationSubjectRepository;
+    private final SubjectRepository subjectRepository;
+    private final EducationLevelRepository educationLevelRepository;
     private final SpecialtyMapper specialtyMapper;
+    private final SubjectCombinationMapper subjectCombinationMapper;
 
     @Autowired
     public SpecialtyService(
             SpecialtyRepository specialtyRepository,
-            FacultyRepository facultyRepository,
-            SpecialtyMapper specialtyMapper
+            ProgramRepository programRepository,
+            SpecializationSubjectRepository specializationSubjectRepository,
+            SubjectRepository subjectRepository,
+            EducationLevelRepository educationLevelRepository,
+            SpecialtyMapper specialtyMapper,
+            SubjectCombinationMapper subjectCombinationMapper
     ) {
         this.specialtyRepository = specialtyRepository;
-        this.facultyRepository = facultyRepository;
+        this.programRepository = programRepository;
+        this.specializationSubjectRepository = specializationSubjectRepository;
+        this.subjectRepository = subjectRepository;
+        this.educationLevelRepository = educationLevelRepository;
         this.specialtyMapper = specialtyMapper;
+        this.subjectCombinationMapper = subjectCombinationMapper;
     }
 
     public List<SpecialtyResponse> findSpecialtiesBySubjects(List<Long> subjectIds) {
@@ -49,86 +70,115 @@ public class SpecialtyService {
 
         List<Specialty> allSpecialties = specialtyRepository.findAll();
         return allSpecialties.stream()
-                .filter(specialty -> hasMatchingCombination(specialty, subjectIds))
-                .map(specialtyMapper::fromSpecialty)
+                .filter(specialty -> hasMatchingSubjects(specialty, subjectIds))
+                .map(spec -> specialtyMapper.fromSpecialty(
+                        spec,
+                        resolveFacultyIds(spec.getId()),
+                        subjectCombinationMapper.fromSpecializationSubjects(
+                                spec.getId(),
+                                new java.util.HashSet<>(specializationSubjectRepository.findBySpecializationId(spec.getId()))
+                        )
+                ))
                 .collect(Collectors.toList());
     }
 
-    private boolean hasMatchingCombination(Specialty specialty, List<Long> subjectIds) {
-        if (specialty.getSubjectCombinations() == null) {
+    private boolean hasMatchingSubjects(Specialty specialty, List<Long> subjectIds) {
+        List<SpecializationSubject> subjects = specializationSubjectRepository.findBySpecializationId(specialty.getId());
+        if (subjects.isEmpty()) {
             return false;
         }
 
-        return specialty.getSubjectCombinations().stream()
-                .anyMatch(combination ->
-                        combination.getSubjects() != null &&
-                                combination.getSubjects().stream()
-                                        .map(Subject::getId)
-                                        .allMatch(subjectIds::contains)
-                );
+        return subjects.stream()
+                .map(SpecializationSubject::getSubjectId)
+                .allMatch(subjectIds::contains);
     }
 
     public List<SpecialtyResponse> getAllSpecialties() {
-        return specialtyRepository.findAll().stream()
-                .map(specialtyMapper::fromSpecialty)
+        List<Specialty> specialties = specialtyRepository.findAll();
+        return specialties.stream()
+                .map(spec -> specialtyMapper.fromSpecialty(
+                        spec,
+                        resolveFacultyIds(spec.getId()),
+                        subjectCombinationMapper.fromSpecializationSubjects(
+                                spec.getId(),
+                                new java.util.HashSet<>(specializationSubjectRepository.findBySpecializationId(spec.getId()))
+                        )
+                ))
                 .collect(Collectors.toList());
     }
 
     public Optional<SpecialtyResponse> getSpecialtyById(Long id) {
         return specialtyRepository.findById(id)
-                .map(specialtyMapper::fromSpecialty);
+                .map(spec -> specialtyMapper.fromSpecialty(
+                        spec,
+                        resolveFacultyIds(spec.getId()),
+                        subjectCombinationMapper.fromSpecializationSubjects(
+                                spec.getId(),
+                                new java.util.HashSet<>(specializationSubjectRepository.findBySpecializationId(spec.getId()))
+                        )
+                ));
     }
 
     @Transactional(readOnly = true)
     public SpecialtyResponse getSpecialtyByIdWithDetails(Long id) {
-        return specialtyRepository.findById(id)
-                .map(specialty -> {
-                    Hibernate.initialize(specialty.getSubjectCombinations());
-                    if (specialty.getSubjectCombinations() != null) {
-                        specialty.getSubjectCombinations().forEach(comb -> {
-                            Hibernate.initialize(comb.getSubjects());
-                        });
-                    }
-                    Hibernate.initialize(specialty.getFaculties());
-                    return specialtyMapper.fromSpecialty(specialty);
-                })
+        Specialty specialty = specialtyRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Specialty not found"));
+
+        Hibernate.initialize(specialty.getSpecializationSubjects());
+        return specialtyMapper.fromSpecialty(
+                specialty,
+                resolveFacultyIds(specialty.getId()),
+                subjectCombinationMapper.fromSpecializationSubjects(
+                        specialty.getId(),
+                        new java.util.HashSet<>(specializationSubjectRepository.findBySpecializationId(specialty.getId()))
+                )
+        );
     }
 
     @Transactional
     public SpecialtyResponse createSpecialty(SpecialtyRequest request) {
         Specialty specialty = specialtyMapper.toSpecialty(request);
+        if (request.educationLevelId() != null) {
+            EducationLevel level = educationLevelRepository.findById(request.educationLevelId())
+                    .orElseThrow(() -> new IllegalArgumentException("Education level not found: " + request.educationLevelId()));
+            specialty.setEducationLevel(level);
+        }
+
         Specialty savedSpecialty = specialtyRepository.save(specialty);
-        return specialtyMapper.fromSpecialty(savedSpecialty);
+        upsertPrograms(savedSpecialty, request.facultyIds());
+        upsertSubjects(savedSpecialty.getId(), request.subjectCombinations());
+
+        return getSpecialtyByIdWithDetails(savedSpecialty.getId());
     }
 
     @Transactional
     public Optional<SpecialtyResponse> updateSpecialty(Long id, SpecialtyRequest request) {
         return specialtyRepository.findById(id)
                 .map(existingSpecialty -> {
-                    // Обновляем основные поля
                     existingSpecialty.setName(request.name());
                     existingSpecialty.setProgramCode(request.programCode());
                     existingSpecialty.setDescription(request.description());
 
-                    // Обновляем связи с факультетами
-                    Set<Faculty> faculties = request.facultyIds().stream()
-                            .map(facultyId -> {
-                                Faculty faculty = new Faculty();
-                                faculty.setId(facultyId);
-                                return faculty;
-                            })
-                            .collect(Collectors.toSet());
-                    existingSpecialty.setFaculties(faculties);
+                    if (request.educationLevelId() != null) {
+                        EducationLevel level = educationLevelRepository.findById(request.educationLevelId())
+                                .orElseThrow(() -> new IllegalArgumentException("Education level not found: " + request.educationLevelId()));
+                        existingSpecialty.setEducationLevel(level);
+                    } else {
+                        existingSpecialty.setEducationLevel(null);
+                    }
 
-                    Specialty savedSpecialty = specialtyRepository.save(existingSpecialty);
-                    return specialtyMapper.fromSpecialty(savedSpecialty);
+                    Specialty saved = specialtyRepository.save(existingSpecialty);
+                    upsertPrograms(saved, request.facultyIds());
+                    upsertSubjects(saved.getId(), request.subjectCombinations());
+                    return getSpecialtyByIdWithDetails(saved.getId());
                 });
     }
 
     @Transactional
     public boolean deleteSpecialty(Long id) {
         if (specialtyRepository.existsById(id)) {
+            specializationSubjectRepository.deleteBySpecializationId(id);
+            programRepository.findBySpecializationId(id).forEach(programRepository::delete);
             specialtyRepository.deleteById(id);
             return true;
         }
@@ -137,15 +187,31 @@ public class SpecialtyService {
 
     @Transactional(readOnly = true)
     public List<SpecialtyResponse> getSpecialtiesByFaculty(Long facultyId) {
-        return specialtyRepository.findByFacultiesId(facultyId).stream()
-                .map(specialtyMapper::fromSpecialty)
+        List<Specialty> specialties = specialtyRepository.findByFacultyId(facultyId);
+        return specialties.stream()
+                .map(spec -> specialtyMapper.fromSpecialty(
+                        spec,
+                        resolveFacultyIds(spec.getId()),
+                        subjectCombinationMapper.fromSpecializationSubjects(
+                                spec.getId(),
+                                new java.util.HashSet<>(specializationSubjectRepository.findBySpecializationId(spec.getId()))
+                        )
+                ))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<SpecialtyResponse> getSpecialtiesByUniversity(Long universityId) {
-        return specialtyRepository.findByFacultiesUniversityId(universityId).stream()
-                .map(specialtyMapper::fromSpecialty)
+        List<Specialty> specialties = specialtyRepository.findByUniversityId(universityId);
+        return specialties.stream()
+                .map(spec -> specialtyMapper.fromSpecialty(
+                        spec,
+                        resolveFacultyIds(spec.getId()),
+                        subjectCombinationMapper.fromSpecializationSubjects(
+                                spec.getId(),
+                                new java.util.HashSet<>(specializationSubjectRepository.findBySpecializationId(spec.getId()))
+                        )
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -157,7 +223,6 @@ public class SpecialtyService {
             String form,
             String subject
     ) {
-        // Используем обновлённый метод репозитория
         List<Specialty> specialties = specialtyRepository.searchSpecialties(
                 universityId,
                 query,
@@ -167,7 +232,14 @@ public class SpecialtyService {
         );
 
         return specialties.stream()
-                .map(specialtyMapper::fromSpecialty)
+                .map(spec -> specialtyMapper.fromSpecialty(
+                        spec,
+                        resolveFacultyIds(spec.getId()),
+                        subjectCombinationMapper.fromSpecializationSubjects(
+                                spec.getId(),
+                                new java.util.HashSet<>(specializationSubjectRepository.findBySpecializationId(spec.getId()))
+                        )
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -181,37 +253,96 @@ public class SpecialtyService {
                     .build();
 
             for (SpecialtyCsvDTO dto : csvToBean) {
-                Specialty specialty;
-                if (dto.getId() == null) {
-                    specialty = new Specialty();
-                } else {
-                    specialty = specialtyRepository.findById(dto.getId())
-                            .orElse(new Specialty());
-                }
+                Specialty specialty = dto.getId() == null
+                        ? new Specialty()
+                        : specialtyRepository.findById(dto.getId()).orElse(new Specialty());
 
                 specialty.setName(dto.getName());
                 specialty.setProgramCode(dto.getProgramCode());
                 specialty.setDescription(dto.getDescription());
 
-                // Обработка нескольких факультетов
-                if (dto.getFacultyIds() != null && !dto.getFacultyIds().isEmpty()) {
-                    Set<Faculty> faculties = dto.getFacultyIds().stream()
-                            .map(id -> {
-                                Faculty faculty = new Faculty();
-                                faculty.setId(id);
-                                return faculty;
-                            })
-                            .collect(Collectors.toSet());
-                    specialty.setFaculties(faculties);
-                } else {
-                    specialty.setFaculties(Collections.emptySet());
+                if (dto.getEducationLevelId() != null) {
+                    EducationLevel level = educationLevelRepository.findById(dto.getEducationLevelId())
+                            .orElseThrow(() -> new IllegalArgumentException("Education level not found: " + dto.getEducationLevelId()));
+                    specialty.setEducationLevel(level);
                 }
 
-                savedSpecialties.add(specialtyRepository.save(specialty));
+                Specialty saved = specialtyRepository.save(specialty);
+                upsertPrograms(saved, dto.getFacultyIds());
+                upsertSubjects(saved.getId(), null);
+                savedSpecialties.add(saved);
             }
         } catch (Exception e) {
             throw new Exception("Failed to process specialties CSV: " + e.getMessage(), e);
         }
         return savedSpecialties;
+    }
+
+    private void upsertPrograms(Specialty specialty, List<Long> facultyIds) {
+        if (facultyIds == null) return;
+
+        List<Program> existing = programRepository.findBySpecializationId(specialty.getId());
+        Set<Long> existingFacultyIds = existing.stream()
+                .map(Program::getFaculty)
+                .filter(Objects::nonNull)
+                .map(Faculty::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        for (Long facultyId : facultyIds) {
+            if (!existingFacultyIds.contains(facultyId)) {
+                Program program = new Program();
+                Faculty faculty = new Faculty();
+                faculty.setId(facultyId);
+                program.setFaculty(faculty);
+                program.setSpecialization(specialty);
+                programRepository.save(program);
+            }
+        }
+    }
+
+    private void upsertSubjects(Long specialtyId, List<com.unidata.university_system.dto.SubjectCombinationRequest> subjectCombinations) {
+        if (specialtyId == null || subjectCombinations == null) {
+            return;
+        }
+
+        specializationSubjectRepository.deleteBySpecializationId(specialtyId);
+
+        Set<Long> subjectIds = subjectCombinations.stream()
+                .filter(req -> req.subjects() != null)
+                .flatMap(req -> req.subjects().stream())
+                .map(SubjectRequest::id)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Specialty specialty = specialtyRepository.findById(specialtyId)
+                .orElseThrow(() -> new IllegalArgumentException("Specialty not found: " + specialtyId));
+
+        for (Long subjectId : subjectIds) {
+            Subject subject = subjectRepository.findById(subjectId)
+                    .orElseThrow(() -> new IllegalArgumentException("Subject not found: " + subjectId));
+
+            SpecializationSubject entity = new SpecializationSubject();
+            entity.setSpecializationId(specialtyId);
+            entity.setSubjectId(subjectId);
+            entity.setSpecialization(specialty);
+            entity.setSubject(subject);
+            entity.setIsRequired(true);
+            specializationSubjectRepository.save(entity);
+        }
+    }
+
+    private List<Long> resolveFacultyIds(Long specialtyId) {
+        if (specialtyId == null) {
+            return Collections.emptyList();
+        }
+
+        return programRepository.findBySpecializationId(specialtyId).stream()
+                .map(Program::getFaculty)
+                .filter(Objects::nonNull)
+                .map(Faculty::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
     }
 }

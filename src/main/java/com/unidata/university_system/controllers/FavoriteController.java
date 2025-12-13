@@ -34,23 +34,23 @@ public class FavoriteController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/specialty/{specialtyId}")
-    public ResponseEntity<Void> addFavoriteSpecialty(
+    @PostMapping("/program/{programId}")
+    public ResponseEntity<Void> addFavoriteProgram(
             Authentication authentication,
-            @PathVariable Long specialtyId
+            @PathVariable Long programId
     ) {
         User user = (User) authentication.getPrincipal();
-        userService.addFavoriteSpecialty(user.getId(), specialtyId);
+        userService.addFavoriteProgram(user.getId(), programId);
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/specialty/{specialtyId}")
-    public ResponseEntity<Void> removeFavoriteSpecialty(
+    @DeleteMapping("/program/{programId}")
+    public ResponseEntity<Void> removeFavoriteProgram(
             Authentication authentication,
-            @PathVariable Long specialtyId
+            @PathVariable Long programId
     ) {
         User user = (User) authentication.getPrincipal();
-        userService.removeFavoriteSpecialty(user.getId(), specialtyId);
+        userService.removeFavoriteProgram(user.getId(), programId);
         return ResponseEntity.ok().build();
     }
 }

@@ -4,12 +4,12 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.HashSet;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Entity
-@Table(name = "faculty")
+@Table(name = "faculties")
 @Getter
 @Setter
 public class Faculty {
@@ -17,19 +17,34 @@ public class Faculty {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
-
     @ManyToOne
-    @JoinColumn(name = "university_id", nullable = false)
+    @JoinColumn(name = "university_id")
     private University university;
 
-    // Добавляем связь многие-ко-многим со специальностями
-    @ManyToMany
-    @JoinTable(
-            name = "faculty_specialty",
-            joinColumns = @JoinColumn(name = "faculty_id"),
-            inverseJoinColumns = @JoinColumn(name = "specialty_id")
-    )
-    private Set<Specialty> specialties = new HashSet<>();
+    @Column(name = "full_name", nullable = false)
+    private String fullName;
+
+    @Column(name = "abbreviation")
+    private String abbreviation;
+
+    @Column(name = "dean_name")
+    private String deanName;
+
+    @Column(name = "dean_contacts")
+    private String deanContacts;
+
+    @Column(name = "address")
+    private String address;
+
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "phone")
+    private String phone;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "faculty", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Program> programs = new ArrayList<>();
 }

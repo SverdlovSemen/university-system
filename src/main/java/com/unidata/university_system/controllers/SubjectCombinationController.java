@@ -2,14 +2,11 @@ package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.SubjectCombinationRequest;
 import com.unidata.university_system.dto.SubjectCombinationResponse;
-import com.unidata.university_system.models.SubjectCombination;
 import com.unidata.university_system.services.SubjectCombinationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -25,36 +22,12 @@ public class SubjectCombinationController {
         return subjectCombinationService.getSubjectCombinationsBySpecialtyId(specialtyId);
     }
 
-    @PostMapping
+    @PutMapping("/specialty/{specialtyId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public SubjectCombinationResponse createSubjectCombination(@Valid @RequestBody SubjectCombinationRequest request) {
-        return subjectCombinationService.createSubjectCombination(request);
-    }
-
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<SubjectCombinationResponse> updateSubjectCombination(@PathVariable Long id, @Valid @RequestBody SubjectCombinationRequest request) {
-        return subjectCombinationService.updateSubjectCombination(id, request)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteSubjectCombination(@PathVariable Long id) {
-        if (subjectCombinationService.deleteSubjectCombination(id)) {
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.notFound().build();
-    }
-
-    @PostMapping("/import")
-    public ResponseEntity<List<SubjectCombination>> importSubjectCombinations(@RequestParam("file") MultipartFile file) {
-        try {
-            List<SubjectCombination> combinations = subjectCombinationService.importSubjectCombinations(file);
-            return ResponseEntity.ok(combinations);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(null);
-        }
+    public List<SubjectCombinationResponse> replaceSubjectCombinations(
+            @PathVariable Long specialtyId,
+            @Valid @RequestBody List<SubjectCombinationRequest> requests
+    ) {
+        return subjectCombinationService.replaceSubjects(specialtyId, requests);
     }
 }

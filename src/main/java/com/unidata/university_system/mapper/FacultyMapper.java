@@ -8,6 +8,7 @@ import com.unidata.university_system.repositories.UniversityRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,19 +17,24 @@ import java.util.stream.Collectors;
 public class FacultyMapper {
 
     @Autowired
-    private SpecialtyMapper specialtyMapper;
-
-    @Autowired
     private UniversityRepository universityRepository;
 
     public Faculty toFaculty(FacultyRequest request) {
         if (request == null) return null;
         Faculty faculty = new Faculty();
         faculty.setId(request.id());
-        faculty.setName(request.name());
-        University university = universityRepository.findById(request.universityId())
-                .orElseThrow(() -> new IllegalArgumentException("University not found with ID: " + request.universityId()));
-        faculty.setUniversity(university);
+        faculty.setFullName(request.fullName());
+        faculty.setAbbreviation(request.abbreviation());
+        faculty.setDeanName(request.deanName());
+        faculty.setDeanContacts(request.deanContacts());
+        faculty.setAddress(request.address());
+        faculty.setEmail(request.email());
+        faculty.setPhone(request.phone());
+        if (request.universityId() != null) {
+            University university = universityRepository.findById(request.universityId())
+                    .orElseThrow(() -> new IllegalArgumentException("University not found with ID: " + request.universityId()));
+            faculty.setUniversity(university);
+        }
         return faculty;
     }
 
@@ -36,12 +42,14 @@ public class FacultyMapper {
         if (faculty == null) return null;
         return new FacultyResponse(
                 faculty.getId(),
-                faculty.getName(),
-                faculty.getUniversity().getId(),
-                faculty.getSpecialties() != null ?
-                        faculty.getSpecialties().stream()
-                                .map(specialtyMapper::fromSpecialty)
-                                .collect(Collectors.toList()) : null
+                faculty.getFullName(),
+                faculty.getAbbreviation(),
+                faculty.getUniversity() != null ? faculty.getUniversity().getId() : null,
+                faculty.getDeanName(),
+                faculty.getDeanContacts(),
+                faculty.getAddress(),
+                faculty.getEmail(),
+                faculty.getPhone()
         );
     }
 

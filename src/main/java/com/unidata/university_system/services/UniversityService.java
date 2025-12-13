@@ -16,6 +16,7 @@ import jakarta.persistence.criteria.*;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.input.BOMInputStream;
+import org.apache.commons.io.ByteOrderMark;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -62,6 +63,7 @@ public class UniversityService {
         City city = cityRepository.findById(request.cityId())
                 .orElseThrow(() -> new IllegalArgumentException("City not found: " + request.cityId()));
         university.setCity(city);
+        validateAccreditation(university.getAccreditationExpiryDate());
 
         University savedUniversity = universityRepository.save(university);
         return universityMapper.fromUniversity(savedUniversity);
@@ -72,9 +74,10 @@ public class UniversityService {
         CriteriaQuery<University> cq = cb.createQuery(University.class);
         Root<University> universityRoot = cq.from(University.class);
 
-        // Создаем join для связи University → Faculty → Specialty
+        // Университет → Факультет → Программы → Специализации
         Join<University, Faculty> facultyJoin = universityRoot.join("faculties");
-        Join<Faculty, Specialty> specialtyJoin = facultyJoin.join("specialties");
+        Join<Faculty, Program> programJoin = facultyJoin.join("programs");
+        Join<Program, Specialty> specialtyJoin = programJoin.join("specialization");
 
         // Условие поиска по ID специальности
         Predicate specialtyPredicate = cb.equal(specialtyJoin.get("id"), specialtyId);
@@ -98,11 +101,17 @@ public class UniversityService {
             University university = existingUniversity.get();
 
             // Обновляем поля
-            university.setShortName(request.shortName());
             university.setFullName(request.fullName());
+            university.setAbbreviation(request.abbreviation());
             university.setType(request.type());
-            university.setAvgEgeScore(request.avgEgeScore());
-            university.setCountryRanking(request.countryRanking());
+            university.setOwnershipType(request.ownershipType());
+            university.setFoundedYear(request.foundedYear());
+            university.setWebsite(request.website());
+            university.setAdminEmail(request.adminEmail());
+            university.setAdminPhone(request.adminPhone());
+            university.setAccreditationNumber(request.accreditationNumber());
+            university.setAccreditationExpiryDate(request.accreditationExpiryDate());
+            validateAccreditation(university.getAccreditationExpiryDate());
 
             // Обновляем город, если изменился cityId
             if (request.cityId() != null && !request.cityId().equals(university.getCity().getId())) {
@@ -134,13 +143,13 @@ public class UniversityService {
 
         if (nameQuery != null && !nameQuery.isEmpty()) {
             String pattern = "%" + nameQuery.toLowerCase() + "%";
-            Predicate shortNamePredicate = cb.like(cb.lower(root.get("shortName")), pattern);
+            Predicate abbreviationPredicate = cb.like(cb.lower(root.get("abbreviation")), pattern);
             Predicate fullNamePredicate = cb.like(cb.lower(root.get("fullName")), pattern);
-            predicates.add(cb.or(shortNamePredicate, fullNamePredicate));
+            predicates.add(cb.or(abbreviationPredicate, fullNamePredicate));
         }
 
         cq.where(predicates.toArray(new Predicate[0]));
-        cq.orderBy(cb.asc(root.get("countryRanking"))); // Сортируем по рейтингу
+        // Сортируем по ID (можно добавить сортировку по рейтингу из university_ratings если нужно)
 
         return entityManager.createQuery(cq)
                 .setMaxResults(limit)
@@ -167,9 +176,9 @@ public class UniversityService {
         //Фильтр по названию
         if (nameQuery != null && !nameQuery.isEmpty()) {
             String pattern = "%" + nameQuery.toLowerCase() + "%";
-            Predicate shortNamePredicate = cb.like(cb.lower(universityRoot.get("shortName")), pattern);
+            Predicate abbreviationPredicate = cb.like(cb.lower(universityRoot.get("abbreviation")), pattern);
             Predicate fullNamePredicate = cb.like(cb.lower(universityRoot.get("fullName")), pattern);
-            predicates.add(cb.or(shortNamePredicate, fullNamePredicate));
+            predicates.add(cb.or(abbreviationPredicate, fullNamePredicate));
         }
 
         // Фильтр по региону
@@ -179,49 +188,63 @@ public class UniversityService {
             predicates.add(cb.equal(regionJoin.get("id"), regionId));
         }
 
-        // Фильтр по специальностям (исправленный)
+        // Фильтр по специальностям
         if (specialtyIds != null && !specialtyIds.isEmpty()) {
-            // Создаем подзапрос для университетов с нужными специальностями
             Subquery<Long> universitySubquery = cq.subquery(Long.class);
-            Root<Faculty> facultyRoot = universitySubquery.from(Faculty.class);
-            Join<Faculty, Specialty> specialtyJoin = facultyRoot.join("specialties");
+            Root<Program> programRoot = universitySubquery.from(Program.class);
+            Join<Program, Faculty> programFacultyJoin = programRoot.join("faculty");
 
-            universitySubquery.select(facultyRoot.get("university").get("id"))
-                    .where(specialtyJoin.get("id").in(specialtyIds));
+            universitySubquery.select(programFacultyJoin.get("university").get("id"))
+                    .where(programRoot.get("specialization").get("id").in(specialtyIds));
 
             predicates.add(universityRoot.get("id").in(universitySubquery));
         }
 
         // Фильтр по предметам
         if (subjectIds != null && !subjectIds.isEmpty()) {
-            // Создаем подзапрос для университетов с нужными предметами
             Subquery<Long> subjectSubquery = cq.subquery(Long.class);
-            Root<SubjectCombination> combinationRoot = subjectSubquery.from(SubjectCombination.class);
-            Join<SubjectCombination, Specialty> combinationSpecialtyJoin = combinationRoot.join("specialty");
-            Join<Specialty, Faculty> specialtyFacultyJoin = combinationSpecialtyJoin.join("faculty");
-            Join<SubjectCombination, Subject> subjectJoin = combinationRoot.join("subjects");
+            Root<ProgramSubject> programSubjectRoot = subjectSubquery.from(ProgramSubject.class);
+            Join<ProgramSubject, AdmissionCondition> admissionConditionJoin = programSubjectRoot.join("admissionCondition");
+            Join<AdmissionCondition, Program> programJoin = admissionConditionJoin.join("program");
+            Join<Program, Faculty> facultyJoin = programJoin.join("faculty");
 
-            subjectSubquery.select(specialtyFacultyJoin.get("university").get("id"))
-                    .where(subjectJoin.get("id").in(subjectIds));
+            subjectSubquery.select(facultyJoin.get("university").get("id"))
+                    .where(programSubjectRoot.get("subject").get("id").in(subjectIds));
 
             predicates.add(universityRoot.get("id").in(subjectSubquery));
         }
 
-        // Фильтр по баллу
+        // Фильтр по проходному баллу (admission_conditions.passing_score)
         if (minScore != null || maxScore != null) {
-            Path<Double> scorePath = universityRoot.get("avgEgeScore");
+            Subquery<Long> scoreSubquery = cq.subquery(Long.class);
+            Root<AdmissionCondition> admissionRoot = scoreSubquery.from(AdmissionCondition.class);
+            Join<AdmissionCondition, Program> programJoin = admissionRoot.join("program");
+            Join<Program, Faculty> facultyJoin = programJoin.join("faculty");
 
-            if (minScore != null && maxScore != null) {
-                predicates.add(cb.between(scorePath, minScore, maxScore));
-            } else if (minScore != null) {
-                predicates.add(cb.ge(scorePath, minScore));
-            } else {
-                predicates.add(cb.le(scorePath, maxScore));
+            List<Predicate> scorePredicates = new ArrayList<>();
+            if (minScore != null) {
+                scorePredicates.add(cb.greaterThanOrEqualTo(
+                        admissionRoot.get("passingScore"),
+                        java.math.BigDecimal.valueOf(minScore)
+                ));
             }
+            if (maxScore != null) {
+                scorePredicates.add(cb.lessThanOrEqualTo(
+                        admissionRoot.get("passingScore"),
+                        java.math.BigDecimal.valueOf(maxScore)
+                ));
+            }
+
+            scoreSubquery.select(facultyJoin.get("university").get("id"))
+                    .where(cb.and(scorePredicates.toArray(new Predicate[0])));
+
+            predicates.add(universityRoot.get("id").in(scoreSubquery));
         }
 
-        // Сортировка по рейтингу
-        cq.orderBy(cb.asc(universityRoot.get("countryRanking")));
+        // Фильтр по баллу - убрано, так как avgEgeScore больше нет в модели University
+        // Можно добавить фильтрацию через university_ratings или admission_conditions если нужно
+
+        // Сортировка по ID (можно добавить сортировку по рейтингу из university_ratings если нужно)
 
         // Убираем дубликаты
         cq.distinct(true);
@@ -258,19 +281,21 @@ public class UniversityService {
 
         List<University> savedUniversities = new ArrayList<>();
 
-        try (Reader reader = new InputStreamReader(new BOMInputStream(file.getInputStream()), StandardCharsets.UTF_8)) {
+        try (Reader reader = new InputStreamReader(
+                new BOMInputStream(file.getInputStream(), false, ByteOrderMark.UTF_8, ByteOrderMark.UTF_16LE, ByteOrderMark.UTF_16BE),
+                StandardCharsets.UTF_8)) {
             CsvToBean<UniversityCsvDTO> csvToBean = new CsvToBeanBuilder<UniversityCsvDTO>(reader)
                     .withType(UniversityCsvDTO.class)
                     .withIgnoreLeadingWhiteSpace(true)
                     .build();
 
             for (UniversityCsvDTO dto : csvToBean) {
-                String shortName = dto.getShortName() != null ? dto.getShortName().trim() : null;
+                String abbreviation = dto.getShortName() != null ? dto.getShortName().trim() : null;
                 String fullName = dto.getFullName() != null ? dto.getFullName().trim() : null;
                 String type = dto.getType() != null ? dto.getType().trim() : null;
                 String cityName = dto.getCityName() != null ? dto.getCityName().trim() : null;
 
-                if (shortName == null || shortName.isEmpty() ||
+                if (abbreviation == null || abbreviation.isEmpty() ||
                         fullName == null || fullName.isEmpty() ||
                         type == null || type.isEmpty() ||
                         cityName == null || cityName.isEmpty()) {
@@ -280,28 +305,29 @@ public class UniversityService {
                 City city = cityRepository.findByNameIgnoreCase(cityName)
                         .orElseThrow(() -> new IllegalArgumentException("City not found: " + cityName));
 
-                // Используем новый метод репозитория
-                Optional<University> existing = universityRepository.findByShortNameIgnoreCaseAndCityId(shortName, city.getId());
+                // Используем новый метод репозитория (нужно обновить метод в репозитории)
+                Optional<University> existing = universityRepository.findByAbbreviationIgnoreCaseAndCityId(abbreviation, city.getId());
 
                 if ("ADD".equalsIgnoreCase(mode)) {
                     if (existing.isEmpty()) {
                         University newUniversity = new University();
-                        newUniversity.setShortName(shortName);
+                        newUniversity.setAbbreviation(abbreviation);
                         newUniversity.setFullName(fullName);
                         newUniversity.setType(type);
-                        newUniversity.setAvgEgeScore(dto.getAvgEgeScore());
-                        newUniversity.setCountryRanking(dto.getCountryRanking());
                         newUniversity.setCity(city);
+                        newUniversity.setCreatedAt(java.time.LocalDateTime.now());
                         savedUniversities.add(universityRepository.save(newUniversity));
                     }
                 } else {
                     University university = existing.orElseGet(University::new);
-                    university.setShortName(shortName);
+                    university.setAbbreviation(abbreviation);
                     university.setFullName(fullName);
                     university.setType(type);
-                    university.setAvgEgeScore(dto.getAvgEgeScore());
-                    university.setCountryRanking(dto.getCountryRanking());
                     university.setCity(city);
+                    if (university.getCreatedAt() == null) {
+                        university.setCreatedAt(java.time.LocalDateTime.now());
+                    }
+                    university.setUpdatedAt(java.time.LocalDateTime.now());
                     savedUniversities.add(universityRepository.save(university));
                 }
             }
@@ -311,5 +337,20 @@ public class UniversityService {
         }
 
         return universityMapper.fromUniversityList(savedUniversities);
+    }
+
+    private void validateAccreditation(java.time.LocalDate accreditationExpiryDate) {
+        if (accreditationExpiryDate == null) {
+            return;
+        }
+
+        java.time.LocalDate today = java.time.LocalDate.now();
+        if (accreditationExpiryDate.isBefore(today)) {
+            throw new IllegalArgumentException("Дата окончания аккредитации не может быть в прошлом");
+        }
+
+        if (accreditationExpiryDate.isAfter(today.plusYears(6))) {
+            throw new IllegalArgumentException("Срок аккредитации не может превышать 6 лет от текущей даты");
+        }
     }
 }

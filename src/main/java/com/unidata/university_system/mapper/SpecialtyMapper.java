@@ -2,10 +2,11 @@ package com.unidata.university_system.mapper;
 
 import com.unidata.university_system.dto.SpecialtyRequest;
 import com.unidata.university_system.dto.SpecialtyResponse;
-import com.unidata.university_system.models.Faculty;
+import com.unidata.university_system.dto.SubjectCombinationResponse;
+import com.unidata.university_system.dto.SubjectResponse;
+import com.unidata.university_system.models.EducationLevel;
+import com.unidata.university_system.models.SpecializationSubject;
 import com.unidata.university_system.models.Specialty;
-import com.unidata.university_system.repositories.FacultyRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -16,12 +17,6 @@ import java.util.stream.Collectors;
 @Service
 public class SpecialtyMapper {
 
-    @Autowired
-    private SubjectCombinationMapper subjectCombinationMapper;
-
-    @Autowired
-    private FacultyRepository facultyRepository;
-
     public Specialty toSpecialty(SpecialtyRequest request) {
         if (request == null) return null;
 
@@ -29,30 +24,22 @@ public class SpecialtyMapper {
         specialty.setId(request.id());
         specialty.setName(request.name());
         specialty.setProgramCode(request.programCode());
-        specialty.setDescription(request.description());
+        specialty.setDescription(request.description() != null ? request.description() : "");
 
-        // Заменяем single faculty на set of faculties
-        Set<Faculty> faculties = request.facultyIds().stream()
-                .map(id -> {
-                    Faculty faculty = new Faculty();
-                    faculty.setId(id);
-                    return faculty;
-                })
-                .collect(Collectors.toSet());
-        specialty.setFaculties(faculties);
-
-        if (request.subjectCombinations() != null) {
-            specialty.setSubjectCombinations(
-                    request.subjectCombinations().stream()
-                            .map(subjectCombinationMapper::toSubjectCombination)
-                            .collect(Collectors.toList())
-            );
+        if (request.educationLevelId() != null) {
+            EducationLevel level = new EducationLevel();
+            level.setId(request.educationLevelId());
+            specialty.setEducationLevel(level);
         }
 
         return specialty;
     }
 
-    public SpecialtyResponse fromSpecialty(Specialty specialty) {
+    public SpecialtyResponse fromSpecialty(
+            Specialty specialty,
+            List<Long> facultyIds,
+            List<SubjectCombinationResponse> subjectCombinations
+    ) {
         if (specialty == null) return null;
 
         return new SpecialtyResponse(
@@ -60,20 +47,38 @@ public class SpecialtyMapper {
                 specialty.getName(),
                 specialty.getProgramCode(),
                 specialty.getDescription(),
-                specialty.getFaculties().stream()
-                        .map(Faculty::getId)
-                        .collect(Collectors.toList()),
-                specialty.getSubjectCombinations() != null ?
-                        specialty.getSubjectCombinations().stream()
-                                .map(subjectCombinationMapper::fromSubjectCombination)
-                                .collect(Collectors.toList()) : Collections.emptyList()
+                facultyIds == null ? Collections.emptyList() : facultyIds,
+                subjectCombinations == null ? Collections.emptyList() : subjectCombinations
         );
     }
 
-    public List<SpecialtyResponse> fromSpecialtyList(List<Specialty> specialties) {
+    public List<SubjectCombinationResponse> toSubjectCombinationResponses(Set<SpecializationSubject> specializationSubjects) {
+        if (specializationSubjects == null || specializationSubjects.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<SubjectResponse> subjects = specializationSubjects.stream()
+                .map(SpecializationSubject::getSubject)
+                .filter(subject -> subject != null)
+                .map(subject -> new SubjectResponse(subject.getId(), subject.getName()))
+                .toList();
+
+        SubjectCombinationResponse combination = new SubjectCombinationResponse(
+                null,
+                specializationSubjects.iterator().next().getSpecializationId(),
+                subjects
+        );
+
+        return List.of(combination);
+    }
+
+    public List<SpecialtyResponse> fromSpecialtyList(
+            List<Specialty> specialties,
+            java.util.function.Function<Specialty, List<SubjectCombinationResponse>> subjectsProvider
+    ) {
         if (specialties == null) return Collections.emptyList();
         return specialties.stream()
-                .map(this::fromSpecialty)
+                .map(spec -> fromSpecialty(spec, Collections.emptyList(), subjectsProvider.apply(spec)))
                 .collect(Collectors.toList());
     }
 }

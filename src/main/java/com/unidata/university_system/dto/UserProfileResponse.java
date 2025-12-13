@@ -4,7 +4,8 @@ import java.util.Set;
 
 public record UserProfileResponse(
         Long id,
-        String username,
+        String email,
+        String firstName,
         Boolean enabled,
         Set<String> roles,
         Set<UniversityResponse> favoriteUniversities,

@@ -9,6 +9,11 @@ import java.util.Optional;
 @Repository
 public interface RoleRepository extends JpaRepository<Role, Long> {
 
-    // Поиск роли по названию (например, "ROLE_ADMIN")
-    Optional<Role> findByRoleName(String roleName);
+    // Поиск роли по названию
+    Optional<Role> findByName(String name);
+
+    // Для обратной совместимости
+    default Optional<Role> findByRoleName(String roleName) {
+        return findByName(roleName);
+    }
 }

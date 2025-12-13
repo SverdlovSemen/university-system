@@ -9,9 +9,18 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // Поиск пользователя по имени пользователя (логину)
-    Optional<User> findByUsername(String username);
+    // Поиск пользователя по email
+    Optional<User> findByEmail(String email);
 
-    // Проверка существования пользователя с заданным именем
-    boolean existsByUsername(String username);
+    // Проверка существования пользователя с заданным email
+    boolean existsByEmail(String email);
+
+    // Для обратной совместимости со Spring Security (UserDetailsService использует username)
+    default Optional<User> findByUsername(String username) {
+        return findByEmail(username);
+    }
+
+    default boolean existsByUsername(String username) {
+        return existsByEmail(username);
+    }
 }

@@ -22,6 +22,9 @@ public class SpecialtyCsvDTO {
     @CsvBindByName(column = "description")
     private String description;
 
+    @CsvBindByName(column = "education_level_id")
+    private Long educationLevelId;
+
     // Изменяем на список ID факультетов
     @CsvBindAndSplitByName(
             column = "faculty_ids",

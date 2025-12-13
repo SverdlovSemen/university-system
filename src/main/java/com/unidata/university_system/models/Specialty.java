@@ -4,12 +4,13 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "specialty")
+@Table(name = "specializations")
 @Getter
 @Setter
 public class Specialty {
@@ -17,17 +18,23 @@ public class Specialty {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false)
+    @Column(name = "code", nullable = false, unique = true)
     private String programCode;
 
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    // Поле direction в новой схеме — используем вместо старого description
+    @Column(name = "direction", nullable = false)
     private String description;
 
-    @ManyToMany(mappedBy = "specialties")
-    private Set<Faculty> faculties = new HashSet<>();
+    @ManyToOne
+    @JoinColumn(name = "education_level_id")
+    private EducationLevel educationLevel;
 
-    @OneToMany(mappedBy = "specialty", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<SubjectCombination> subjectCombinations;
+    @OneToMany(mappedBy = "specialization", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Program> programs = new ArrayList<>();
+
+    @OneToMany(mappedBy = "specialization", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<SpecializationSubject> specializationSubjects = new HashSet<>();
 }

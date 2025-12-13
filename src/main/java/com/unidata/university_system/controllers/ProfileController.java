@@ -1,7 +1,6 @@
 package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.UserProfileResponse;
-import com.unidata.university_system.mapper.SpecialtyMapper;
 import com.unidata.university_system.mapper.UniversityMapper;
 import com.unidata.university_system.models.User;
 import com.unidata.university_system.services.UserService;
@@ -21,7 +20,6 @@ public class ProfileController {
 
     private final UserService userService;
     private final UniversityMapper universityMapper;
-    private final SpecialtyMapper specialtyMapper;
 
     @GetMapping("/me")
     public UserProfileResponse getUserProfile(Authentication authentication) {
@@ -29,15 +27,14 @@ public class ProfileController {
 
         return new UserProfileResponse(
                 user.getId(),
-                user.getUsername(),
+                user.getEmail(),
+                user.getFirstName(),
                 user.isEnabled(),
-                user.getRoles().stream().map(r -> r.getRoleName()).collect(Collectors.toSet()),
+                user.getRole() != null ? Set.of(user.getRole().getName()) : Set.of(),
                 userService.getFavoriteUniversities(user.getId()).stream()
                         .map(universityMapper::fromUniversity)
                         .collect(Collectors.toSet()),
-                userService.getFavoriteSpecialties(user.getId()).stream()
-                        .map(specialtyMapper::fromSpecialty)
-                        .collect(Collectors.toSet())
+                Set.of() // Программы пока не маппятся, возвращаем пустой Set
         );
     }
 }

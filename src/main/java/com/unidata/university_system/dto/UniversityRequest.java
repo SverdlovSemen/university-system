@@ -1,29 +1,24 @@
 package com.unidata.university_system.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
+
+import java.time.LocalDate;
 
 public record UniversityRequest(
         Long id,
-
-        @NotBlank(message = "Short name must not be empty")
-        String shortName,
-
         @NotBlank(message = "Full name must not be empty")
         String fullName,
-
+        @NotBlank(message = "Abbreviation must not be empty")
+        String abbreviation,
         @NotBlank(message = "Type must not be empty")
         String type,
-
-        @PositiveOrZero(message = "Average EGE score must be positive or zero")
-        Double avgEgeScore,
-
-        @Positive(message = "Country ranking must be positive")
-        Integer countryRanking,
-
-        @NotNull(message = "City must be provided")
-        Long cityId
+        String ownershipType,
+        Long cityId,
+        Integer foundedYear,
+        String website,
+        String adminEmail,
+        String adminPhone,
+        String accreditationNumber,
+        LocalDate accreditationExpiryDate
 ) {
 }

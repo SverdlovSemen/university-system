@@ -17,7 +17,9 @@ public class RoleMapper {
         if (request == null) return null;
         Role role = new Role();
         role.setId(request.id());
-        role.setRoleName(request.roleName());
+        role.setName(request.name());
+        role.setDescription(request.description());
+        role.setPermissions(request.permissions());
         return role;
     }
 
@@ -25,7 +27,9 @@ public class RoleMapper {
         if (role == null) return null;
         return new RoleResponse(
                 role.getId(),
-                role.getRoleName()
+                role.getName(),
+                role.getDescription(),
+                role.getPermissions()
         );
     }
 
