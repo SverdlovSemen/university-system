@@ -26,6 +26,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
+import com.unidata.university_system.repositories.UserRepository;
+import com.unidata.university_system.repositories.UniversityEmployeeRepository;
+import com.unidata.university_system.repositories.FacultyRepository;
+import com.unidata.university_system.models.User;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -62,6 +69,15 @@ public class SpecialtyService {
         this.specialtyMapper = specialtyMapper;
         this.subjectCombinationMapper = subjectCombinationMapper;
     }
+
+        @Autowired
+        private UserRepository userRepository;
+
+        @Autowired
+        private UniversityEmployeeRepository universityEmployeeRepository;
+
+        @Autowired
+        private FacultyRepository facultyRepository;
 
     public List<SpecialtyResponse> findSpecialtiesBySubjects(List<Long> subjectIds) {
         if (subjectIds == null || subjectIds.isEmpty()) {
@@ -137,7 +153,14 @@ public class SpecialtyService {
 
     @Transactional
     public SpecialtyResponse createSpecialty(SpecialtyRequest request) {
-        Specialty specialty = specialtyMapper.toSpecialty(request);
+                // Authorization: check editor belongs to target universities (faculties)
+                if (request.facultyIds() != null && !request.facultyIds().isEmpty()) {
+                        Long facultyId = request.facultyIds().get(0);
+                        Long uniId = facultyRepository.findById(facultyId).map(f -> f.getUniversity().getId()).orElse(null);
+                        if (uniId != null) checkCanModifyUniversity(uniId);
+                }
+
+                Specialty specialty = specialtyMapper.toSpecialty(request);
         if (request.educationLevelId() != null) {
             EducationLevel level = educationLevelRepository.findById(request.educationLevelId())
                     .orElseThrow(() -> new IllegalArgumentException("Education level not found: " + request.educationLevelId()));
@@ -155,6 +178,11 @@ public class SpecialtyService {
     public Optional<SpecialtyResponse> updateSpecialty(Long id, SpecialtyRequest request) {
         return specialtyRepository.findById(id)
                 .map(existingSpecialty -> {
+                                        if (request.facultyIds() != null && !request.facultyIds().isEmpty()) {
+                                                Long facultyId = request.facultyIds().get(0);
+                                                Long uniId = facultyRepository.findById(facultyId).map(f -> f.getUniversity().getId()).orElse(null);
+                                                if (uniId != null) checkCanModifyUniversity(uniId);
+                                        }
                     existingSpecialty.setName(request.name());
                     existingSpecialty.setProgramCode(request.programCode());
                     existingSpecialty.setDescription(request.description());
@@ -176,14 +204,36 @@ public class SpecialtyService {
 
     @Transactional
     public boolean deleteSpecialty(Long id) {
-        if (specialtyRepository.existsById(id)) {
-            specializationSubjectRepository.deleteBySpecializationId(id);
-            programRepository.findBySpecializationId(id).forEach(programRepository::delete);
-            specialtyRepository.deleteById(id);
-            return true;
-        }
-        return false;
+                Optional<Specialty> s = specialtyRepository.findById(id);
+                if (s.isPresent()) {
+                        // ensure user can modify university(ies) for this specialty
+                        List<Program> progs = programRepository.findBySpecializationId(id);
+                        if (!progs.isEmpty()) {
+                                Long uniId = progs.get(0).getFaculty().getUniversity().getId();
+                                if (uniId != null) checkCanModifyUniversity(uniId);
+                        }
+
+                        specializationSubjectRepository.deleteBySpecializationId(id);
+                        programRepository.findBySpecializationId(id).forEach(programRepository::delete);
+                        specialtyRepository.deleteById(id);
+                        return true;
+                }
+                return false;
     }
+
+        private void checkCanModifyUniversity(Long universityId) {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth == null) throw new AccessDeniedException("Unauthorized");
+                String email = auth.getName();
+                User user = userRepository.findByEmail(email).orElseThrow(() -> new AccessDeniedException("User not found"));
+                if (user.getRole() != null && "ROLE_ADMIN".equals(user.getRole().getName())) return;
+                if (user.getRole() != null && "ROLE_EDITOR".equals(user.getRole().getName())) {
+                        boolean ok = universityEmployeeRepository.existsByUniversityIdAndUserId(universityId, user.getId());
+                        if (!ok) throw new AccessDeniedException("Not allowed to modify this university");
+                        return;
+                }
+                throw new AccessDeniedException("Not allowed");
+        }
 
     @Transactional(readOnly = true)
     public List<SpecialtyResponse> getSpecialtiesByFaculty(Long facultyId) {

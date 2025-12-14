@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import EditorDashboard from './pages/EditorDashboard';
 import { useAuth } from './hooks/useAuth';
 import UniversityPage from './pages/UniversityPage';
+import ProgramPage from './pages/ProgramPage';
 import SpecialtySearchPage from './pages/SpecialtySearchPage';
 import SpecialtyPage from './pages/SpecialtyPage';
 import UserProfilePage from "./pages/UserProfilePage";
@@ -39,6 +40,8 @@ const AppRouter = () => {
 
             {/* Страница университета (доступна всем) */}
             <Route path="/university/:id" element={<UniversityPage />} />
+            {/* Страница программы конкретного университета */}
+            <Route path="/university/:universityId/program/:specialtyId" element={<ProgramPage />} />
 
             {/* Новая страница поиска специальностей (доступна всем) */}
             <Route path="/specialty-search" element={<SpecialtySearchPage />} />

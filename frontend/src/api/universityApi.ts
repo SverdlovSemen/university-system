@@ -56,6 +56,12 @@ export const getUniversitySpecialties = async (universityId: number): Promise<Sp
     return response.data;
 };
 
+// Попытка получить информацию о специальности в контексте конкретного университета
+export const getUniversitySpecialty = async (universityId: number, specialtyId: number) => {
+    const response = await axios.get(`${API_URL}/${universityId}/programs/${specialtyId}`);
+    return response.data;
+};
+
 export const fetchUniversitiesBySpecialty = async (specialtyId: number): Promise<UniversityResponse[]> => {
     const response = await axios.get(`${API_URL}/by-specialty/${specialtyId}`);
     return response.data;

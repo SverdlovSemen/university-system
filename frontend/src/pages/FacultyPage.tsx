@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Card, Spinner, Button, ListGroup, Row, Col } from 'react-bootstrap';
 import { getFacultyById, getFacultySpecialties } from '../api/facultyApi';
+import { fetchSpecialtiesByUniversity } from '../api/specialtyApi';
+import { useLocation } from 'react-router-dom';
 import { FacultyResponse, SpecialtyResponse } from '../types';
 import { useAuth } from '../hooks/useAuth';
 
@@ -13,6 +15,8 @@ const FacultyPage = () => {
     const [loading, setLoading] = useState(true);
     const { isAuthenticated } = useAuth();
 
+    const location = useLocation();
+
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
@@ -20,7 +24,16 @@ const FacultyPage = () => {
                 if (!id) return;
 
                 const facultyData = await getFacultyById(parseInt(id));
-                const specialtiesData = await getFacultySpecialties(parseInt(id));
+
+                const params = new URLSearchParams(location.search);
+                const universityIdParam = params.get('universityId');
+
+                let specialtiesData: SpecialtyResponse[] = [];
+                if (universityIdParam) {
+                    specialtiesData = await fetchSpecialtiesByUniversity(parseInt(universityIdParam), parseInt(id));
+                } else {
+                    specialtiesData = await getFacultySpecialties(parseInt(id));
+                }
 
                 setFaculty(facultyData);
                 setSpecialties(specialtiesData);
@@ -33,7 +46,7 @@ const FacultyPage = () => {
         };
 
         loadData();
-    }, [id, navigate]);
+    }, [id, navigate, location.search]);
 
     if (loading) {
         return (

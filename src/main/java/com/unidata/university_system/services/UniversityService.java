@@ -20,6 +20,12 @@ import org.apache.commons.io.ByteOrderMark;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
+import com.unidata.university_system.repositories.UserRepository;
+import com.unidata.university_system.repositories.UniversityEmployeeRepository;
+import com.unidata.university_system.models.User;
 
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -38,6 +44,12 @@ public class UniversityService {
 
     @Autowired
     private CityRepository cityRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private UniversityEmployeeRepository universityEmployeeRepository;
 
     @Autowired
     private UniversityMapper universityMapper;
@@ -100,6 +112,9 @@ public class UniversityService {
         if (existingUniversity.isPresent()) {
             University university = existingUniversity.get();
 
+            // Authorization: only ADMIN or EDITOR (belonging to this university) can update
+            checkCanModifyUniversity(id);
+
             // Обновляем поля
             university.setFullName(request.fullName());
             university.setAbbreviation(request.abbreviation());
@@ -128,10 +143,26 @@ public class UniversityService {
 
     public boolean deleteUniversity(Long id) {
         if (universityRepository.existsById(id)) {
+            // Authorization: ensure current user can delete
+            checkCanModifyUniversity(id);
             universityRepository.deleteById(id);
             return true;
         }
         return false;
+    }
+
+    private void checkCanModifyUniversity(Long universityId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) throw new AccessDeniedException("Unauthorized");
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new AccessDeniedException("User not found"));
+        if (user.getRole() != null && "ROLE_ADMIN".equals(user.getRole().getName())) return;
+        if (user.getRole() != null && "ROLE_EDITOR".equals(user.getRole().getName())) {
+            boolean ok = universityEmployeeRepository.existsByUniversityIdAndUserId(universityId, user.getId());
+            if (!ok) throw new AccessDeniedException("Not allowed to modify this university");
+            return;
+        }
+        throw new AccessDeniedException("Not allowed");
     }
 
     public List<UniversityResponse> searchUniversitiesByName(String nameQuery, int limit) {

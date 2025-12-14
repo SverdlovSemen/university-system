@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -33,11 +34,13 @@ public class UniversityController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public UniversityResponse createUniversity(@RequestBody UniversityRequest request) {
         return universityService.createUniversity(request);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
     public ResponseEntity<UniversityResponse> updateUniversity(@PathVariable Long id, @RequestBody UniversityRequest request) {
         return universityService.updateUniversity(id, request)
                 .map(ResponseEntity::ok)
@@ -45,6 +48,7 @@ public class UniversityController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
     public ResponseEntity<Void> deleteUniversity(@PathVariable Long id) {
         if (universityService.deleteUniversity(id)) {
             return ResponseEntity.ok().build();

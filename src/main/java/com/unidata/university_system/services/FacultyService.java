@@ -14,6 +14,12 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
+import com.unidata.university_system.repositories.UserRepository;
+import com.unidata.university_system.repositories.UniversityEmployeeRepository;
+import com.unidata.university_system.models.User;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -33,6 +39,12 @@ public class FacultyService {
     private UniversityRepository universityRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private UniversityEmployeeRepository universityEmployeeRepository;
+
+    @Autowired
     private FacultyMapper facultyMapper;
 
     public List<FacultyResponse> getAllFaculties() {
@@ -47,6 +59,9 @@ public class FacultyService {
     }
 
     public FacultyResponse createFaculty(FacultyRequest request) {
+        // Authorization: only ADMIN or EDITOR belonging to the university can create
+        checkCanModifyUniversity(request.universityId());
+
         Faculty faculty = facultyMapper.toFaculty(request);
         Faculty savedFaculty = facultyRepository.save(faculty);
         return facultyMapper.fromFaculty(savedFaculty);
@@ -55,6 +70,9 @@ public class FacultyService {
     public Optional<FacultyResponse> updateFaculty(Long id, FacultyRequest request) {
         Optional<Faculty> existingFaculty = facultyRepository.findById(id);
         if (existingFaculty.isPresent()) {
+            Long uniId = request.universityId() != null ? request.universityId() : existingFaculty.get().getUniversity().getId();
+            checkCanModifyUniversity(uniId);
+
             Faculty updatedFaculty = facultyMapper.toFaculty(request);
             updatedFaculty.setId(id);
             Faculty savedFaculty = facultyRepository.save(updatedFaculty);
@@ -64,11 +82,28 @@ public class FacultyService {
     }
 
     public boolean deleteFaculty(Long id) {
-        if (facultyRepository.existsById(id)) {
+        Optional<Faculty> existing = facultyRepository.findById(id);
+        if (existing.isPresent()) {
+            Long uniId = existing.get().getUniversity() != null ? existing.get().getUniversity().getId() : null;
+            if (uniId != null) checkCanModifyUniversity(uniId);
             facultyRepository.deleteById(id);
             return true;
         }
         return false;
+    }
+
+    private void checkCanModifyUniversity(Long universityId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) throw new AccessDeniedException("Unauthorized");
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new AccessDeniedException("User not found"));
+        if (user.getRole() != null && "ROLE_ADMIN".equals(user.getRole().getName())) return;
+        if (user.getRole() != null && "ROLE_EDITOR".equals(user.getRole().getName())) {
+            boolean ok = universityEmployeeRepository.existsByUniversityIdAndUserId(universityId, user.getId());
+            if (!ok) throw new AccessDeniedException("Not allowed to modify this university");
+            return;
+        }
+        throw new AccessDeniedException("Not allowed");
     }
 
     public List<FacultyResponse> getFacultiesByUniversity(Long universityId) {
