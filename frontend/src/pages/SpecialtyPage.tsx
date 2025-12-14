@@ -194,17 +194,17 @@ const SpecialtyPage = () => {
                                     <div className="d-flex justify-content-between align-items-center">
                                         <div>
                                             {/* Исправлено: используем shortName и fullName */}
-                                            <h5 className="mb-1">{university.shortName}</h5>
+                                            <h5 className="mb-1">{university.abbreviation || university.fullName}</h5>
                                             <div className="text-muted small">{university.fullName}</div>
                                             <div className="text-muted">
                                                 {university.city?.name}, {university.city?.region?.name}
                                             </div>
                                             <div className="mt-1">
                                                 <span className="badge bg-secondary me-2">
-                                                    Средний балл: {university.avgEgeScore || 'Н/Д'}
+                                                    Средний балл: {(university as any).avgEgeScore ?? 'Н/Д'}
                                                 </span>
                                                 <span className="badge bg-secondary">
-                                                    Рейтинг: {university.countryRanking || 'Н/Д'}
+                                                    Рейтинг: {(university as any).countryRanking ?? 'Н/Д'}
                                                 </span>
                                             </div>
                                         </div>

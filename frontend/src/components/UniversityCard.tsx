@@ -45,22 +45,22 @@ const UniversityCard: React.FC<UniversityCardProps> = ({ university }) => {
     return (
         <Card className="h-100">
             <Card.Body>
-                <Card.Title>{university.shortName}</Card.Title>
+                <Card.Title>{university.abbreviation || university.fullName}</Card.Title>
                 <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.9rem' }}>
                     {university.fullName}
                 </Card.Subtitle>
                 <Card.Text className="mb-1">
-                    <strong>Город:</strong> {university.city.name}
+                    <strong>Город:</strong> {university.city?.name || '—'}
                 </Card.Text>
                 <Card.Text className="mb-2">
-                    <strong>Регион:</strong> {university.city.region.name}
+                    <strong>Регион:</strong> {university.city?.region?.name || '—'}
                 </Card.Text>
                 <Card.Text>
                     <strong>Тип:</strong> {university.type}
                     <br />
-                    <strong>Средний балл:</strong> {university.avgEgeScore || 'не указан'}
+                    <strong>Средний балл:</strong> {(university as any).avgEgeScore ?? 'не указан'}
                     <br />
-                    <strong>Рейтинг в стране:</strong> {university.countryRanking || 'не указан'}
+                    <strong>Рейтинг в стране:</strong> {(university as any).countryRanking ?? 'не указан'}
                 </Card.Text>
 
                 <div className="d-flex justify-content-between">

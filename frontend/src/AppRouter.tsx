@@ -5,6 +5,9 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminDashboard from './pages/AdminDashboard';
 import EditorDashboard from './pages/EditorDashboard';
+import EditorUniversityPage from './pages/EditorUniversityPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import UniversityEditorsPage from './pages/UniversityEditorsPage';
 import { useAuth } from './hooks/useAuth';
 import UniversityPage from './pages/UniversityPage';
 import ProgramPage from './pages/ProgramPage';
@@ -12,6 +15,8 @@ import SpecialtySearchPage from './pages/SpecialtySearchPage';
 import SpecialtyPage from './pages/SpecialtyPage';
 import UserProfilePage from "./pages/UserProfilePage";
 import FacultyPage from './pages/FacultyPage';
+import UniversityAdminDashboard from './pages/UniversityAdminDashboard';
+import UniversityAdminUsersPage from './pages/UniversityAdminUsersPage';
 
 const ProtectedRoute: React.FC<{
     children: React.ReactNode,
@@ -68,8 +73,17 @@ const AppRouter = () => {
             <Route
                 path="/admin"
                 element={
-                    <ProtectedRoute roles={['ROLE_ADMIN']}>
+                    <ProtectedRoute roles={['ROLE_ADMIN','ROLE_UNIVERSITY_ADMIN']}>
                         <AdminDashboard />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/admin/users"
+                element={
+                    <ProtectedRoute roles={['ROLE_ADMIN','ROLE_UNIVERSITY_ADMIN']}>
+                        <AdminUsersPage />
                     </ProtectedRoute>
                 }
             />
@@ -77,8 +91,44 @@ const AppRouter = () => {
             <Route
                 path="/editor"
                 element={
-                    <ProtectedRoute roles={['ROLE_EDITOR']}>
+                    <ProtectedRoute roles={['ROLE_EDITOR','ROLE_UNIVERSITY_ADMIN']}>
                         <EditorDashboard />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/editor/university"
+                element={
+                    <ProtectedRoute roles={['ROLE_EDITOR','ROLE_UNIVERSITY_ADMIN']}>
+                        <EditorUniversityPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/university-admin"
+                element={
+                    <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
+                        <UniversityAdminDashboard />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/university-admin/users"
+                element={
+                    <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
+                        <UniversityAdminUsersPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/university-admin/editors"
+                element={
+                    <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
+                        <UniversityEditorsPage />
                     </ProtectedRoute>
                 }
             />

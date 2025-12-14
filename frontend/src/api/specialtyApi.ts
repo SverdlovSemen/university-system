@@ -37,3 +37,40 @@ export const fetchSpecialtiesBySubjects = async (subjectIds: number[]): Promise<
     const response = await axios.get(`${API_URL}/by-subjects`, { params });
     return response.data;
 };
+
+export const createSpecialty = async (data: {
+    name: string;
+    programCode?: string;
+    description?: string;
+    facultyIds: number[];
+}) => {
+    const payload = {
+        name: data.name,
+        programCode: data.programCode,
+        description: data.description,
+        facultyIds: data.facultyIds
+    };
+    const response = await axios.post(`${API_URL}`, payload);
+    return response.data;
+};
+
+export const updateSpecialty = async (id: number, data: {
+    name: string;
+    programCode?: string;
+    description?: string;
+    facultyIds: number[];
+}) => {
+    const payload = {
+        name: data.name,
+        programCode: data.programCode,
+        description: data.description,
+        facultyIds: data.facultyIds
+    };
+    const response = await axios.put(`${API_URL}/${id}`, payload);
+    return response.data;
+};
+
+export const deleteSpecialty = async (id: number) => {
+    const response = await axios.delete(`${API_URL}/${id}`);
+    return response.data;
+};

@@ -10,6 +10,7 @@ interface User {
     roles: string[];
     favoriteUniversities: number[];
     favoriteSpecialties: number[];
+        universityIds?: number[]; // университеты, в которых пользователь является сотрудником
 }
 
 interface AuthContextType {
@@ -59,6 +60,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 roles: profileData.roles,
                 favoriteUniversities: profileData.favoriteUniversities || [],
                 favoriteSpecialties: profileData.favoriteSpecialties || []
+                ,
+                universityIds: profileData.universityIds || []
             };
 
             setUser(userData);
@@ -87,6 +90,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         verifyAuth();
     }, [token, fetchUserProfile]);
+
+    // Ensure axios includes Authorization header for subsequent requests
+    useEffect(() => {
+        if (token) {
+            if (axios && axios.defaults && axios.defaults.headers) {
+                axios.defaults.headers.common = axios.defaults.headers.common || {};
+                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            }
+        } else {
+            try {
+                if (axios && axios.defaults && axios.defaults.headers && axios.defaults.headers.common) {
+                    delete axios.defaults.headers.common['Authorization'];
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+    }, [token]);
 
     const login = useCallback(async (email: string, password: string) => {
         try {

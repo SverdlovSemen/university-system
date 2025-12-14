@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Form, Container, Card, Alert } from 'react-bootstrap';
+import axios from 'axios';
 
 const RegisterPage = () => {
     const [email, setEmail] = useState('');
@@ -8,6 +9,7 @@ const RegisterPage = () => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+    // editor self-registration removed; admins will assign editor role
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -25,27 +27,13 @@ const RegisterPage = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:8080/api/auth/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: email,
-                    firstName: firstName,
-                    password: password
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Ошибка регистрации');
-            }
-
-            const data = await response.json();
+            await axios.post('/api/auth/register', { email, firstName, password });
             navigate('/login', { state: { message: 'Регистрация успешна! Теперь войдите.' } });
         } catch (err: any) {
-            setError(err.message || 'Ошибка регистрации. Возможно, такой email уже существует.');
+            const resp = err?.response?.data;
+            let message = resp?.message || resp || err.message || 'Ошибка регистрации. Возможно, такой email уже существует.';
+            if (typeof message === 'object') message = JSON.stringify(message);
+            setError(message);
         }
     };
 
@@ -99,6 +87,8 @@ const RegisterPage = () => {
                                 required
                             />
                         </Form.Group>
+
+                        {/* Editor self-registration removed. Администратор может назначать роль редактора через панель администратора. */}
 
                         <Button variant="primary" type="submit" className="w-100 mb-3">
                             Зарегистрироваться

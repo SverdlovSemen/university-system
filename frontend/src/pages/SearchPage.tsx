@@ -63,7 +63,7 @@ const SearchPage = () => {
                 callback(
                     universities.map(u => ({
                         value: u.id,
-                        label: `${u.shortName} - ${u.fullName}`
+                        label: `${(u as any).abbreviation || u.fullName} - ${u.fullName}`
                     }))
                 );
             });

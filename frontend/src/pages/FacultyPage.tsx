@@ -82,18 +82,18 @@ const FacultyPage = () => {
                 <Card.Body>
                     <Row>
                         <Col md={8}>
-                            <Card.Title>{faculty.name}</Card.Title>
+                            <Card.Title>{(faculty as any).fullName || (faculty as any).abbreviation}</Card.Title>
                             <Card.Subtitle className="mb-2 text-muted">
-                                {faculty.university.shortName}
+                                {(faculty as any).universityId ? `Университет #${(faculty as any).universityId}` : ''}
                             </Card.Subtitle>
                             <Card.Text>
-                                {faculty.description || 'Описание факультета отсутствует'}
+                                {(faculty as any).abbreviation || 'Описание факультета отсутствует'}
                             </Card.Text>
                         </Col>
                         <Col md={4} className="d-flex align-items-center justify-content-end">
                             <Button
                                 variant="outline-primary"
-                                onClick={() => navigate(`/university/${faculty.university.id}`)}
+                                onClick={() => navigate(`/university/${(faculty as any).universityId}`)}
                             >
                                 Перейти к университету
                             </Button>

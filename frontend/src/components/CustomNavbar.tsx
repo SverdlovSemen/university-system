@@ -21,10 +21,10 @@ const CustomNavbar = () => {
                     <Nav className="me-auto">
                         <Nav.Link as={Link} to="/">Поиск университетов</Nav.Link>
                         <Nav.Link as={Link} to="/specialty-search">Поиск специальностей</Nav.Link> {/* Новая ссылка */}
-                        {isAuthenticated && hasRole('ROLE_ADMIN') && (
+                        {isAuthenticated && (hasRole('ROLE_ADMIN') || hasRole('ROLE_UNIVERSITY_ADMIN')) && (
                             <Nav.Link as={Link} to="/admin">Админ-панель</Nav.Link>
                         )}
-                        {isAuthenticated && hasRole('ROLE_EDITOR') && (
+                        {isAuthenticated && (hasRole('ROLE_EDITOR') || hasRole('ROLE_UNIVERSITY_ADMIN')) && (
                             <Nav.Link as={Link} to="/editor">Редактор</Nav.Link>
                         )}
                     </Nav>

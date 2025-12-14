@@ -75,3 +75,8 @@ export const searchUniversities = async (query: string, limit: number = 10): Pro
     const response = await axios.get(`${API_URL}/search-by-name`, { params });
     return response.data;
 };
+
+export const getAllUniversities = async (): Promise<UniversityResponse[]> => {
+    const response = await axios.get(`${API_URL}`);
+    return response.data;
+};

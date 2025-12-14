@@ -13,6 +13,7 @@ const UserProfilePage = () => {
         loading: authLoading,
         removeFavoriteUniversity,
         removeFavoriteSpecialty
+        , refreshUserProfile
     } = useAuth();
     const navigate = useNavigate();
     const [favoriteUniversities, setFavoriteUniversities] = useState<UniversityResponse[]>([]);
@@ -132,9 +133,14 @@ const UserProfilePage = () => {
                             </Card.Text>
                         </Col>
                         <Col md={4} className="text-end">
-                            <Button variant="outline-danger" onClick={logout}>
-                                Выйти
-                            </Button>
+                            <div className="d-flex justify-content-end">
+                                <Button variant="outline-secondary" className="me-2" onClick={async () => { await refreshUserProfile(); alert('Профиль обновлён'); }}>
+                                    Обновить профиль
+                                </Button>
+                                <Button variant="outline-danger" onClick={logout}>
+                                    Выйти
+                                </Button>
+                            </div>
                         </Col>
                     </Row>
                 </Card.Body>
@@ -156,14 +162,14 @@ const UserProfilePage = () => {
                                 <Col key={university.id} md={6} className="mb-3">
                                     <Card>
                                         <Card.Body>
-                                            <Card.Title>{university.shortName}</Card.Title>
+                                            <Card.Title>{university.abbreviation || university.fullName}</Card.Title>
                                             <Card.Subtitle className="mb-2 text-muted">
                                                 {university.city?.name}, {university.city?.region?.name}
                                             </Card.Subtitle>
                                             <Card.Text>
                                                 <strong>Тип:</strong> {university.type}
                                                 <br />
-                                                <strong>Средний балл:</strong> {university.avgEgeScore || 'не указан'}
+                                                <strong>Средний балл:</strong> {(university as any).avgEgeScore ?? 'не указан'}
                                             </Card.Text>
                                             <Button
                                                 variant="danger"

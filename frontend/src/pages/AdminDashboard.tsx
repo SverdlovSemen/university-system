@@ -1,7 +1,10 @@
 import React from 'react';
 import { Container, Card, Button, Row, Col } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
+    const navigate = useNavigate();
+
     return (
         <Container className="mt-4">
             <Card>
@@ -10,31 +13,19 @@ const AdminDashboard = () => {
                     <Card.Title>Управление системой</Card.Title>
 
                     <Row className="mt-4">
-                        <Col md={4}>
+                        <Col md={6}>
                             <Card>
                                 <Card.Body>
                                     <Card.Title>Пользователи</Card.Title>
                                     <Card.Text>
                                         Управление учетными записями пользователей
                                     </Card.Text>
-                                    <Button variant="outline-primary">Управление</Button>
+                                    <Button variant="outline-primary" onClick={() => navigate('/admin/users')}>Управление</Button>
                                 </Card.Body>
                             </Card>
                         </Col>
 
-                        <Col md={4}>
-                            <Card>
-                                <Card.Body>
-                                    <Card.Title>Университеты</Card.Title>
-                                    <Card.Text>
-                                        Редактирование списка университетов
-                                    </Card.Text>
-                                    <Button variant="outline-primary">Управление</Button>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-
-                        <Col md={4}>
+                        <Col md={6}>
                             <Card>
                                 <Card.Body>
                                     <Card.Title>Статистика</Card.Title>

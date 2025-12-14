@@ -204,7 +204,7 @@ const UniversityPage = () => {
                 <Card.Body>
                     <Row>
                         <Col md={8}>
-                            <Card.Title>{university.shortName || (university as any).abbreviation}</Card.Title>
+                            <Card.Title>{university.abbreviation || university.fullName}</Card.Title>
                             <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.9rem' }}>{university.fullName}</Card.Subtitle>
                             <Card.Subtitle className="mb-2 text-muted">{university.city?.name}, { (university.city as any)?.region?.name}</Card.Subtitle>
                             <Card.Text>
@@ -233,7 +233,7 @@ const UniversityPage = () => {
                             <h5>О университете</h5>
                             <p>{university.fullName}</p>
                             <div className="mt-3">
-                                <strong>Короткое имя:</strong> {university.shortName || (university as any).abbreviation || ''}
+                                <strong>Короткое имя:</strong> {university.abbreviation || ''}
                                 <br />
                                 <strong>Тип:</strong> {university.type || (university as any).ownershipType || ''}
                                 <br />
