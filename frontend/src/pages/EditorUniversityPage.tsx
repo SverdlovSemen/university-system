@@ -61,7 +61,9 @@ const EditorUniversityPage: React.FC = () => {
             alert('Информация об университете обновлена');
         } catch (err) {
             console.error(err);
-            alert('Ошибка при сохранении');
+            const anyErr: any = err;
+            const msg = anyErr?.response?.data?.message || anyErr?.response?.data || anyErr?.message || 'Ошибка при сохранении';
+            alert(msg);
         }
     };
 

@@ -81,13 +81,13 @@ public class SpecialtyController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR','UNIVERSITY_ADMIN')")
     public SpecialtyResponse createSpecialty(@Valid @RequestBody SpecialtyRequest request) {
         return specialtyService.createSpecialty(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR','UNIVERSITY_ADMIN')")
     public ResponseEntity<SpecialtyResponse> updateSpecialty(@PathVariable Long id, @Valid @RequestBody SpecialtyRequest request) {
         return specialtyService.updateSpecialty(id, request)
                 .map(ResponseEntity::ok)
@@ -95,7 +95,7 @@ public class SpecialtyController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR','UNIVERSITY_ADMIN')")
     public ResponseEntity<Void> deleteSpecialty(@PathVariable Long id) {
         if (specialtyService.deleteSpecialty(id)) {
             return ResponseEntity.ok().build();

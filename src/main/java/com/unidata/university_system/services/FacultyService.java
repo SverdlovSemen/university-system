@@ -98,7 +98,7 @@ public class FacultyService {
         String email = auth.getName();
         User user = userRepository.findByEmail(email).orElseThrow(() -> new AccessDeniedException("User not found"));
         if (user.getRole() != null && "ROLE_ADMIN".equals(user.getRole().getName())) return;
-        if (user.getRole() != null && "ROLE_EDITOR".equals(user.getRole().getName())) {
+        if (user.getRole() != null && ("ROLE_EDITOR".equals(user.getRole().getName()) || "ROLE_UNIVERSITY_ADMIN".equals(user.getRole().getName()))) {
             boolean ok = universityEmployeeRepository.existsByUniversityIdAndUserId(universityId, user.getId());
             if (!ok) throw new AccessDeniedException("Not allowed to modify this university");
             return;

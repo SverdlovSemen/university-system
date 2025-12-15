@@ -31,13 +31,13 @@ public class FacultyController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR','UNIVERSITY_ADMIN')")
     public FacultyResponse createFaculty(@Valid @RequestBody FacultyRequest request) {
         return facultyService.createFaculty(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR','UNIVERSITY_ADMIN')")
     public ResponseEntity<FacultyResponse> updateFaculty(@PathVariable Long id, @Valid @RequestBody FacultyRequest request) {
         return facultyService.updateFaculty(id, request)
                 .map(ResponseEntity::ok)
@@ -45,7 +45,7 @@ public class FacultyController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR','UNIVERSITY_ADMIN')")
     public ResponseEntity<Void> deleteFaculty(@PathVariable Long id) {
         if (facultyService.deleteFaculty(id)) {
             return ResponseEntity.ok().build();

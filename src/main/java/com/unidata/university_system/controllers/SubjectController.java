@@ -33,13 +33,13 @@ public class SubjectController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','UNIVERSITY_ADMIN')")
     public SubjectResponse createSubject(@Valid @RequestBody SubjectRequest request) {
         return subjectService.createSubject(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','UNIVERSITY_ADMIN')")
     public ResponseEntity<SubjectResponse> updateSubject(@PathVariable Long id, @Valid @RequestBody SubjectRequest request) {
         return subjectService.updateSubject(id, request)
                 .map(ResponseEntity::ok)
@@ -47,7 +47,7 @@ public class SubjectController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','UNIVERSITY_ADMIN')")
     public ResponseEntity<Void> deleteSubject(@PathVariable Long id) {
         if (subjectService.deleteSubject(id)) {
             return ResponseEntity.ok().build();

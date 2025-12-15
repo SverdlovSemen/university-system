@@ -15,6 +15,7 @@ const SpecialtyForm: React.FC<Props> = ({ universityId, facultyId, onClose }) =>
     const [editing, setEditing] = useState<SpecialtyResponse | null>(null);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [programCode, setProgramCode] = useState('');
 
     const load = async () => {
         if (!universityId) return;
@@ -35,6 +36,7 @@ const SpecialtyForm: React.FC<Props> = ({ universityId, facultyId, onClose }) =>
         setEditing(s);
         setName(s.name);
         setDescription(s.description || '');
+        setProgramCode((s as any).programCode || '');
         setShowEditModal(true);
     };
 
@@ -54,16 +56,19 @@ const SpecialtyForm: React.FC<Props> = ({ universityId, facultyId, onClose }) =>
         e.preventDefault();
         try {
             if (editing) {
-                await updateSpecialty(editing.id, { name, programCode: (editing as any).programCode || '', description, facultyIds: [facultyId] });
+                await updateSpecialty(editing.id, { name, programCode: programCode || (editing as any).programCode || '', description, facultyIds: [facultyId] });
             } else {
                 if (!universityId) throw new Error('universityId required');
-                await createSpecialty({ name, programCode: '', description, facultyIds: [facultyId] });
+                // Ensure programCode is provided to satisfy backend validation
+                const code = programCode && programCode.trim() !== '' ? programCode : `P-${Date.now()}`;
+                await createSpecialty({ name, programCode: code, description, facultyIds: [facultyId] });
             }
             setShowEditModal(false);
             await load();
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert('Ошибка при сохранении программы');
+            const msg = e?.response?.data?.message || e?.response?.data || e?.message || 'Ошибка при сохранении программы';
+            alert(msg);
         }
     };
 
@@ -96,6 +101,10 @@ const SpecialtyForm: React.FC<Props> = ({ universityId, facultyId, onClose }) =>
                         <Form.Group className="mb-3">
                             <Form.Label>Название</Form.Label>
                             <Form.Control value={name} onChange={e => setName(e.target.value)} required />
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Код программы</Form.Label>
+                            <Form.Control value={programCode} onChange={e => setProgramCode(e.target.value)} placeholder="Номер/код программы" />
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>Описание</Form.Label>
