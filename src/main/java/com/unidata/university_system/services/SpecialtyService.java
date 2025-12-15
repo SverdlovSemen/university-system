@@ -178,11 +178,11 @@ public class SpecialtyService {
     public Optional<SpecialtyResponse> updateSpecialty(Long id, SpecialtyRequest request) {
         return specialtyRepository.findById(id)
                 .map(existingSpecialty -> {
-                                        if (request.facultyIds() != null && !request.facultyIds().isEmpty()) {
-                                                Long facultyId = request.facultyIds().get(0);
-                                                Long uniId = facultyRepository.findById(facultyId).map(f -> f.getUniversity().getId()).orElse(null);
-                                                if (uniId != null) checkCanModifyUniversity(uniId);
-                                        }
+                                                        if (request.facultyIds() != null && !request.facultyIds().isEmpty()) {
+                                                                Long facultyId = request.facultyIds().get(0);
+                                                                Long uniId = facultyRepository.findById(facultyId).map(f -> f.getUniversity().getId()).orElse(null);
+                                                                if (uniId != null) checkCanModifyUniversity(uniId);
+                                                        }
                     existingSpecialty.setName(request.name());
                     existingSpecialty.setProgramCode(request.programCode());
                     existingSpecialty.setDescription(request.description());
@@ -227,7 +227,7 @@ public class SpecialtyService {
                 String email = auth.getName();
                 User user = userRepository.findByEmail(email).orElseThrow(() -> new AccessDeniedException("User not found"));
                 if (user.getRole() != null && "ROLE_ADMIN".equals(user.getRole().getName())) return;
-                if (user.getRole() != null && "ROLE_EDITOR".equals(user.getRole().getName())) {
+                if (user.getRole() != null && ("ROLE_EDITOR".equals(user.getRole().getName()) || "ROLE_UNIVERSITY_ADMIN".equals(user.getRole().getName()))) {
                         boolean ok = universityEmployeeRepository.existsByUniversityIdAndUserId(universityId, user.getId());
                         if (!ok) throw new AccessDeniedException("Not allowed to modify this university");
                         return;

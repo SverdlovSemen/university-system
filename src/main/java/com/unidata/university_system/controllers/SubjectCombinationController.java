@@ -23,7 +23,7 @@ public class SubjectCombinationController {
     }
 
     @PutMapping("/specialty/{specialtyId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','UNIVERSITY_ADMIN')")
     public List<SubjectCombinationResponse> replaceSubjectCombinations(
             @PathVariable Long specialtyId,
             @Valid @RequestBody List<SubjectCombinationRequest> requests
