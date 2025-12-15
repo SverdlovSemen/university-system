@@ -46,7 +46,7 @@ const AppRouter = () => {
             {/* Страница университета (доступна всем) */}
             <Route path="/university/:id" element={<UniversityPage />} />
             {/* Страница программы конкретного университета */}
-            <Route path="/university/:universityId/program/:specialtyId" element={<ProgramPage />} />
+            <Route path="/university/:universityId/program/:programId" element={<ProgramPage />} />
 
             {/* Новая страница поиска специальностей (доступна всем) */}
             <Route path="/specialty-search" element={<SpecialtySearchPage />} />

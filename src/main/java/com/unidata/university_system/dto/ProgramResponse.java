@@ -4,13 +4,13 @@ import java.util.List;
 
 public record ProgramResponse(
         Long id,
-        Long facultyId,
-        String facultyName,
-        Long universityId,
-        String universityShortName,
+        FacultyShortResponse faculty,
+        SpecialtyShortResponse specialty,
         String programDescription,
         String studyForm,
         String duration,
+        boolean mobilityOption,
+        String teachingLanguage,
         List<AdmissionConditionResponse> admissionConditions,
         List<SubjectResponse> subjects
 ) {

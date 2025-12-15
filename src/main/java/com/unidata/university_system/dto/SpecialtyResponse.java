@@ -8,6 +8,7 @@ public record SpecialtyResponse(
         String programCode,
         String description,
         List<Long> facultyIds,
-        List<SubjectCombinationResponse> subjectCombinations
+        List<SubjectCombinationResponse> subjectCombinations,
+        String educationLevel // Added field for education level
 ) {
 }

@@ -80,3 +80,9 @@ export const getAllUniversities = async (): Promise<UniversityResponse[]> => {
     const response = await axios.get(`${API_URL}`);
     return response.data;
 };
+
+// Получить все программы университета
+export const getUniversityPrograms = async (universityId: number) => {
+    const response = await axios.get(`${API_URL}/${universityId}/programs`);
+    return response.data;
+};

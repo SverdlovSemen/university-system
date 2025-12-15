@@ -9,6 +9,8 @@ public record AdmissionConditionResponse(
         Integer budgetPlaces,
         Integer targetedPlaces,
         Integer paidPlaces,
-        List<SubjectResponse> subjects
+        List<SubjectResponse> subjects,
+        BigDecimal admissionFee,
+        Boolean hasDvi
 ) {
 }

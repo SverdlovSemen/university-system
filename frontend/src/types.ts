@@ -1,4 +1,6 @@
 // Интерфейсы, соответствующие Java DTO на бэкенде
+import {FacultyShortResponse, SpecialtyShortResponse} from "./api/programApi";
+
 export interface CityResponse {
     id: number;
     name: string;
@@ -51,12 +53,43 @@ export interface SpecialtyResponse {
     description?: string;
     facultyIds: number[];
     subjectCombinations: SubjectCombinationResponse[];
+    educationLevel: string; // Added field for education level
 }
 
 export interface SubjectCombinationResponse {
     id: number;
     specialtyId: number;
     subjects: SubjectResponse[];
+}
+
+export interface AdmissionConditionResponse {
+    year: number;
+    passingScore: number;
+    budgetPlaces: number;
+    targetedPlaces: number;
+    paidPlaces: number;
+    subjects: SubjectResponse[];
+    admissionFee?: number; // стоимость поступления
+    hasDvi?: boolean; // наличие ДВИ
+}
+
+export interface ProgramResponse {
+    id: number;
+    faculty: FacultyShortResponse;
+    specialty: SpecialtyShortResponse;
+    programDescription?: string;
+    studyForm?: string;
+    duration?: string;
+    mobilityOption: boolean; // строго boolean
+    teachingLanguage?: string; // поле для языка обучения как на бэкенде
+    admissionConditions: AdmissionConditionResponse[];
+    subjects: SubjectResponse[];
+}
+
+export interface ProgramListItemResponse {
+    id: number;
+    faculty: FacultyShortResponse;
+    specialty: SpecialtyShortResponse;
 }
 
 // Типы для запросов

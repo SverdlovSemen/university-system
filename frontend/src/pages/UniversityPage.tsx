@@ -5,16 +5,18 @@ import {
     ListGroup, Tab, Tabs
 } from 'react-bootstrap';
 import { getUniversityById } from '../api/universityApi';
-import { fetchSpecialtiesByUniversity } from '../api/specialtyApi';
-import { UniversityResponse, SpecialtyResponse, SubjectResponse } from '../types';
+import { fetchProgramsByUniversity, ProgramListItemResponse } from '../api/programApi';
+import {UniversityResponse, ProgramResponse, SpecialtyResponse} from '../types';
 import { useAuth } from '../hooks/useAuth';
+import {fetchSpecialtiesByUniversity} from "../api/specialtyApi";
+import UniversityCard from '../components/UniversityCard';
 
 const UniversityPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
     const [university, setUniversity] = useState<UniversityResponse | null>(null);
-    const [allSpecialties, setAllSpecialties] = useState<SpecialtyResponse[]>([]);
+    const [allPrograms, setAllPrograms] = useState<ProgramListItemResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('faculties');
 
@@ -40,11 +42,11 @@ const UniversityPage = () => {
                 if (!id) return;
 
                 const universityData = await getUniversityById(parseInt(id));
-                const allSpecialtiesData = await fetchSpecialtiesByUniversity(parseInt(id));
+                const allProgramsData = await fetchProgramsByUniversity(parseInt(id));
 
                 if (isMounted) {
                     setUniversity(universityData);
-                    setAllSpecialties(allSpecialtiesData);
+                    setAllPrograms(allProgramsData);
                 }
             } catch (error) {
                 console.error('Ошибка загрузки данных', error);
@@ -92,28 +94,8 @@ const UniversityPage = () => {
         }
     };
 
-    const handleFacultyDetails = async (facultyId: number) => {
-        // Ensure specialties for faculty are loaded
-        let specs = facultySpecialties[facultyId];
-        try {
-            if (!specs) {
-                setLoadingFacultySpecialties(facultyId);
-                specs = await fetchSpecialtiesByUniversity(university?.id || 0, facultyId);
-                setFacultySpecialties(prev => ({ ...prev, [facultyId]: specs }));
-            }
-            if (specs && specs.length > 0) {
-                const first = specs[0];
-                navigate(`/university/${university?.id}/program/${first.id}?combinationId=null`);
-            } else {
-                // Fallback: navigate to faculty page which lists specialties
-                navigate(`/faculty/${facultyId}?universityId=${university?.id}`);
-            }
-        } catch (err) {
-            console.error('Ошибка при переходе к программе факультета', err);
-            navigate(`/faculty/${facultyId}?universityId=${university?.id}`);
-        } finally {
-            setLoadingFacultySpecialties(null);
-        }
+    const handleFacultyDetails = (facultyId: number) => {
+        navigate(`/faculty/${facultyId}?universityId=${university?.id}`);
     };
 
     useEffect(() => {
@@ -140,41 +122,9 @@ const UniversityPage = () => {
         }
     };
 
-    const buildProgramsFromSpecialties = (specialties: SpecialtyResponse[]) => {
-        type ProgramItem = {
-            specialtyId: number;
-            specialtyName: string;
-            programCode: string;
-            description?: string;
-            combinationId: number | null;
-            subjects: SubjectResponse[];
-        };
-
-        const programs: ProgramItem[] = [];
-        specialties.forEach(s => {
-            if (s.subjectCombinations && s.subjectCombinations.length > 0) {
-                s.subjectCombinations.forEach(comb => {
-                    programs.push({
-                        specialtyId: s.id,
-                        specialtyName: s.name,
-                        programCode: s.programCode,
-                        description: s.description,
-                        combinationId: comb.id,
-                        subjects: comb.subjects || []
-                    });
-                });
-            } else {
-                programs.push({
-                    specialtyId: s.id,
-                    specialtyName: s.name,
-                    programCode: s.programCode,
-                    description: s.description,
-                    combinationId: null,
-                    subjects: []
-                });
-            }
-        });
-        return programs;
+    const goToProgram = (programId: number) => {
+        if (!university) return;
+        navigate(`/university/${university.id}/program/${programId}`);
     };
 
     if (loading) {
@@ -198,33 +148,12 @@ const UniversityPage = () => {
 
     return (
         <Container className="mt-4">
+            <div className="mb-4">
+                {university && <UniversityCard university={university} hideDetailsButton />}
+            </div>
             <Button variant="outline-secondary" onClick={() => navigate(-1)} className="mb-3">Назад к результатам</Button>
 
-            <Card>
-                <Card.Body>
-                    <Row>
-                        <Col md={8}>
-                            <Card.Title>{university.abbreviation || university.fullName}</Card.Title>
-                            <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.9rem' }}>{university.fullName}</Card.Subtitle>
-                            <Card.Subtitle className="mb-2 text-muted">{university.city?.name}, { (university.city as any)?.region?.name}</Card.Subtitle>
-                            <Card.Text>
-                                <strong>Тип:</strong> {university.type || (university as any).ownershipType}
-                                <br />
-                                <strong>Средний балл ЕГЭ:</strong> {(university as any).avgEgeScore ?? 'не указан'}
-                                <br />
-                                <strong>Рейтинг в стране:</strong> {(university as any).countryRanking ?? 'не указан'}
-                            </Card.Text>
-                        </Col>
-                        <Col md={4} className="d-flex align-items-center justify-content-end">
-                            {isAuthenticated && (
-                                <Button variant={isFavoriteUniversity ? "warning" : "outline-primary"} onClick={handleAddToFavorites}>
-                                    {isFavoriteUniversity ? '★ В избранном' : '☆ Добавить в избранное'}
-                                </Button>
-                            )}
-                        </Col>
-                    </Row>
-                </Card.Body>
-            </Card>
+
 
             <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k || 'faculties')} className="mt-4">
                 <Tab eventKey="info" title="Инфо">
@@ -237,11 +166,19 @@ const UniversityPage = () => {
                                 <br />
                                 <strong>Тип:</strong> {university.type || (university as any).ownershipType || ''}
                                 <br />
-                                <strong>Город:</strong> {university.city?.name}, {(university.city as any)?.region?.name}
+                                <strong>Город:</strong> {university.city?.name || 'не указан'}
+                                <br />
+                                <strong>Регион:</strong> {(university.city as any)?.region?.name || 'не указан'}
+                                <br />
+                                <strong>Год основания:</strong> {university.foundedYear || 'не указан'}
                                 <br />
                                 <strong>Сайт:</strong> {(university as any).website || 'не указан'}
                                 <br />
-                                <strong>Статус:</strong> {(university as any).status || 'не указан'}
+                                <strong>Номер аккредитации:</strong> {(university as any).accreditationNumber || 'не указан'}
+                                <br />
+                                <strong>Телефон администрации:</strong> {(university as any).adminPhone || 'не указан'}
+                                <br />
+                                <strong>Почта администрации:</strong> {(university as any).adminEmail || 'не указана'}
                             </div>
                         </Card.Body>
                     </Card>
@@ -258,8 +195,6 @@ const UniversityPage = () => {
                                             <div className="d-flex justify-content-between align-items-start">
                                                 <div>
                                                     <strong>{(faculty as any).name || (faculty as any).fullName || (faculty as any).abbreviation}</strong>
-                                                    <div className="text-muted small">{(faculty as any).description || 'Описание факультета отсутствует'}</div>
-                                                    {(faculty as any).deanName && <div className="small mt-1">Декан: {(faculty as any).deanName}</div>}
                                                 </div>
                                                 <div className="d-flex align-items-start">
                                                     <Button
@@ -285,51 +220,34 @@ const UniversityPage = () => {
                     <Card className="mt-3">
                         <Card.Body>
                             <h5>Все программы университета</h5>
-                            {allSpecialties.length > 0 ? (
-                                (() => {
-                                    const programs = buildProgramsFromSpecialties(allSpecialties);
-                                    return programs.length > 0 ? (
-                                        <ListGroup>
-                                            {programs.map((prog, idx) => (
-                                                <ListGroup.Item
-                                                    key={`${prog.specialtyId}-${prog.combinationId ?? 'none'}-${idx}`}
-                                                    action
-                                                    onClick={() => navigate(`/university/${university.id}/program/${prog.specialtyId}?combinationId=${prog.combinationId}`)}
-                                                >
-                                                    <div className="d-flex justify-content-between">
-                                                        <div>
-                                                            <strong>{prog.specialtyName}</strong>
-                                                            <div>Код программы: {prog.programCode}</div>
-                                                            <div>{prog.description}</div>
-                                                            {prog.subjects && prog.subjects.length > 0 && (
-                                                                <div>
-                                                                    <strong>Требуемые предметы:</strong>
-                                                                    <ul>
-                                                                        {prog.subjects.map((subj: SubjectResponse) => (
-                                                                            <li key={subj.id}>{subj.name}</li>
-                                                                        ))}
-                                                                    </ul>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            {isAuthenticated && (
-                                                                <Button variant={isFavoriteSpecialty(prog.specialtyId) ? "warning" : "outline-secondary"} size="sm" className="me-2" onClick={(e) => { e.stopPropagation(); handleSpecialtyFavorite(prog.specialtyId, e); }}>
-                                                                    {isFavoriteSpecialty(prog.specialtyId) ? '★' : '☆'}
-                                                                </Button>
-                                                            )}
-                                                            <Button variant="outline-info" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/university/${university.id}/program/${prog.specialtyId}?combinationId=${prog.combinationId}`); }}>
-                                                                Подробнее
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                </ListGroup.Item>
-                                            ))}
-                                        </ListGroup>
-                                    ) : (
-                                        <p>Нет данных о программах</p>
-                                    );
-                                })()
+                            {allPrograms.length > 0 ? (
+                                <ListGroup>
+                                    {allPrograms.map((prog, idx) => (
+                                        <ListGroup.Item
+                                            key={prog.id}
+                                            action
+                                            onClick={() => goToProgram(prog.id)}
+                                        >
+                                            <div className="d-flex justify-content-between">
+                                                <div>
+                                                    <strong>{prog.specialty.name}</strong>
+                                                    <div>Код специальности: {prog.specialty.programCode}</div>
+                                                    <div>Факультет: {prog.faculty.fullName || prog.faculty.abbreviation}</div>
+                                                </div>
+                                                <div>
+                                                    {isAuthenticated && (
+                                                        <Button variant={isFavoriteSpecialty(prog.specialty.id) ? "warning" : "outline-secondary"} size="sm" className="me-2" onClick={(e) => { e.stopPropagation(); handleSpecialtyFavorite(prog.specialty.id, e); }}>
+                                                            {isFavoriteSpecialty(prog.specialty.id) ? '★' : '☆'}
+                                                        </Button>
+                                                    )}
+                                                    <Button variant="outline-info" size="sm" onClick={(e) => { e.stopPropagation(); goToProgram(prog.id); }}>
+                                                        Подробнее
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </ListGroup.Item>
+                                    ))}
+                                </ListGroup>
                             ) : (
                                 <p>Нет данных о программах</p>
                             )}

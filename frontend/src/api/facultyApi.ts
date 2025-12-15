@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { FacultyResponse, SpecialtyResponse } from '../types';
+import { FacultyResponse, SpecialtyResponse, ProgramListItemResponse } from '../types';
 
 const API_URL = '/api/faculties';
 
@@ -48,5 +48,10 @@ export const updateFaculty = async (id: number, data: { fullName: string; abbrev
 
 export const deleteFaculty = async (id: number) => {
     const response = await axios.delete(`${API_URL}/${id}`);
+    return response.data;
+};
+
+export const fetchProgramsByFaculty = async (facultyId: number): Promise<ProgramListItemResponse[]> => {
+    const response = await axios.get<ProgramListItemResponse[]>(`/api/faculties/${facultyId}/programs/short`);
     return response.data;
 };

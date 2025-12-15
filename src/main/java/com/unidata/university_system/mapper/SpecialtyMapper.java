@@ -48,7 +48,8 @@ public class SpecialtyMapper {
                 specialty.getProgramCode(),
                 specialty.getDescription(),
                 facultyIds == null ? Collections.emptyList() : facultyIds,
-                subjectCombinations == null ? Collections.emptyList() : subjectCombinations
+                subjectCombinations == null ? Collections.emptyList() : subjectCombinations,
+                specialty.getEducationLevel() != null ? specialty.getEducationLevel().getName() : null // Correctly map education level
         );
     }
 
