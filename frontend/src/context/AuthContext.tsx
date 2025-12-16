@@ -24,9 +24,9 @@ interface AuthContextType {
     hasRole: (role: string) => boolean;
     addFavoriteUniversity: (universityId: number) => Promise<void>;
     removeFavoriteUniversity: (universityId: number) => Promise<void>;
-    addFavoriteSpecialty: (specialtyId: number) => Promise<void>;
-    removeFavoriteSpecialty: (specialtyId: number) => Promise<void>;
-    refreshUserProfile: () => Promise<void>; // Добавляем если нужно
+    addFavoriteProgram: (programId: number) => Promise<void>;
+    removeFavoriteProgram: (programId: number) => Promise<void>;
+    refreshUserProfile: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -143,22 +143,117 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return user?.roles?.includes(requiredRole) ?? false;
     }, [user]);
 
-    // Заглушки для избранного (пока не реализованы)
+    // Реализация функций для работы с избранным
     const addFavoriteUniversity = useCallback(async (universityId: number) => {
-        console.log('addFavoriteUniversity not implemented');
-    }, []);
+        try {
+            console.log(`🚨 ВНИМАНИЕ! addFavoriteUniversity вызвана с universityId: ${universityId}`);
+            console.log(`🔍 Текущий пользователь:`, user);
+
+            if (user && user.favoriteUniversities.includes(universityId)) {
+                console.log(`⚠️ Университет ${universityId} уже в избранном, пропускаем`);
+                return; // Уже добавлен
+            }
+
+            console.log(`📡 Отправляем POST запрос для добавления университета ${universityId}`);
+            await axios.post(`/api/favorites/university/${universityId}`);
+
+            console.log(`🎉 Университет ${universityId} успешно добавлен в избранное`);
+
+            // Обновляем профиль пользователя с сервера
+            if (token) {
+                await fetchUserProfile(token);
+            }
+
+        } catch (error) {
+            console.error('❌ Ошибка добавления университета в избранное:', error);
+            if (axios.isAxiosError(error)) {
+                console.error('❌ Полная ошибка:', error.response?.data || error.message);
+            } else if (error instanceof Error) {
+                console.error('❌ Полная ошибка:', error.message);
+            }
+            throw error;
+        }
+    }, [user, token, fetchUserProfile]);
 
     const removeFavoriteUniversity = useCallback(async (universityId: number) => {
-        console.log('removeFavoriteUniversity not implemented');
-    }, []);
+        try {
+            console.log(`➖ Удаляем из избранного университет ${universityId}`);
+            console.log(`🔍 Текущий пользователь:`, user);
 
-    const addFavoriteSpecialty = useCallback(async (specialtyId: number) => {
-        console.log('addFavoriteSpecialty not implemented');
-    }, []);
+            await axios.delete(`/api/favorites/university/${universityId}`);
 
-    const removeFavoriteSpecialty = useCallback(async (specialtyId: number) => {
-        console.log('removeFavoriteSpecialty not implemented');
-    }, []);
+            console.log(`✅ Университет ${universityId} успешно удалён из избранного`);
+
+            // Обновляем профиль пользователя с сервера
+            if (token) {
+                await fetchUserProfile(token);
+            }
+        } catch (error) {
+            console.error('❌ Ошибка удаления университета из избранного:', error);
+            if (axios.isAxiosError(error)) {
+                console.error('❌ Полная ошибка:', error.response?.data || error.message);
+            } else if (error instanceof Error) {
+                console.error('❌ Полная ошибка:', error.message);
+            }
+            throw error;
+        }
+    }, [user, token, fetchUserProfile]);
+
+    // Функции для работы с избранными программами
+    const addFavoriteProgram = useCallback(async (programId: number) => {
+        try {
+            console.log(`➕ Добавляем программу ${programId} в избранное`);
+            console.log(`🔍 Текущий пользователь:`, user);
+
+            if (user && user.favoriteSpecialties.includes(programId)) {
+                console.log(`⚠️ Программа ${programId} уже в избранном, пропускаем`);
+                return; // Уже добавлена
+            }
+
+            console.log(`📡 Отправляем POST запрос для добавления программы ${programId}`);
+            await axios.post(`/api/favorites/program/${programId}`);
+
+            console.log(`🎉 Программа ${programId} успешно добавлена в избранное`);
+
+            // Обновляем профиль пользователя с сервера
+            if (token) {
+                await fetchUserProfile(token);
+            }
+
+        } catch (error) {
+            console.error('❌ Ошибка добавления программы в избранное:', error);
+            if (axios.isAxiosError(error)) {
+                console.error('❌ Полная ошибка:', error.response?.data || error.message);
+            } else if (error instanceof Error) {
+                console.error('❌ Полная ошибка:', error.message);
+            }
+            throw error;
+        }
+    }, [user, token, fetchUserProfile]);
+
+    const removeFavoriteProgram = useCallback(async (programId: number) => {
+        try {
+            console.log(`➖ Удаляем из избранного программу ${programId}`);
+            console.log(`🔍 Текущий пользователь:`, user);
+
+            await axios.delete(`/api/favorites/program/${programId}`);
+
+            console.log(`✅ Программа ${programId} успешно удалена из избранного`);
+
+            // Обновляем профиль пользователя с сервера
+            if (token) {
+                await fetchUserProfile(token);
+            }
+        } catch (error) {
+            console.error('❌ Ошибка удаления программы из избранного:', error);
+            if (axios.isAxiosError(error)) {
+                console.error('❌ Полная ошибка:', error.response?.data || error.message);
+            } else if (error instanceof Error) {
+                console.error('❌ Полная ошибка:', error.message);
+            }
+            throw error;
+        }
+    }, [user, token, fetchUserProfile]);
 
     const refreshUserProfile = useCallback(async () => {
         if (token) {
@@ -177,10 +272,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         hasRole,
         addFavoriteUniversity,
         removeFavoriteUniversity,
-        addFavoriteSpecialty,
-        removeFavoriteSpecialty,
+        addFavoriteProgram,
+        removeFavoriteProgram,
         refreshUserProfile
     };
+
 
     return (
         <AuthContext.Provider value={contextValue}>

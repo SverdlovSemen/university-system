@@ -16,29 +16,10 @@ const SpecialtySearchPage = () => {
 
     const {
         isAuthenticated,
-        addFavoriteSpecialty,
-        removeFavoriteSpecialty,
         user
     } = useAuth();
 
-    // Функция для проверки, добавлена ли специальность в избранное
-    const isFavorite = (specialtyId: number) => {
-        return user?.favoriteSpecialties?.includes(specialtyId) || false;
-    };
-
-    const handleFavoriteClick = (specialtyId: number, e: React.MouseEvent) => {
-        e.stopPropagation(); // Предотвращаем переход по ссылке
-        if (!isAuthenticated) {
-            navigate('/login');
-            return;
-        }
-
-        if (isFavorite(specialtyId)) {
-            removeFavoriteSpecialty(specialtyId);
-        } else {
-            addFavoriteSpecialty(specialtyId);
-        }
-    };
+    // Убираем функционал избранных специальностей - добавлять в избранное можно только университеты и программы
 
     useEffect(() => {
         const loadSubjects = async () => {
@@ -175,16 +156,6 @@ const SpecialtySearchPage = () => {
                                                     <p className="mb-0">{specialty.description}</p>
                                                 </div>
                                                 <div>
-                                                    {isAuthenticated && (
-                                                        <Button
-                                                            variant={isFavorite(specialty.id) ? "warning" : "outline-secondary"}
-                                                            size="sm"
-                                                            onClick={(e) => handleFavoriteClick(specialty.id, e)}
-                                                            className="me-2"
-                                                        >
-                                                            {isFavorite(specialty.id) ? '★' : '☆'}
-                                                        </Button>
-                                                    )}
                                                     <Button variant="outline-primary" size="sm">
                                                         Подробнее
                                                     </Button>

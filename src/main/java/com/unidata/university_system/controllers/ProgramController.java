@@ -23,7 +23,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/universities")
 public class ProgramController {
 
     private final ProgramRepository programRepository;
@@ -35,7 +34,19 @@ public class ProgramController {
         this.programService = programService;
     }
 
-    @GetMapping("/{universityId}/programs/{specialtyId}")
+    @GetMapping("/api/programs/{id}")
+    public ResponseEntity<ProgramResponse> getProgramById(@PathVariable Long id) {
+        Optional<Program> programOpt = programRepository.findById(id);
+        if (programOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Program program = programOpt.get();
+        ProgramResponse response = mapProgram(program);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/api/universities/{universityId}/programs/{specialtyId}")
     public ResponseEntity<List<ProgramResponse>> getProgramsForSpecialtyInUniversity(
             @PathVariable Long universityId,
             @PathVariable Long specialtyId
@@ -49,7 +60,7 @@ public class ProgramController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{universityId}/programs")
+    @GetMapping("/api/universities/{universityId}/programs")
     public ResponseEntity<List<ProgramResponse>> getProgramsForUniversity(
             @PathVariable Long universityId
     ) {
@@ -59,7 +70,7 @@ public class ProgramController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{universityId}/programs/short")
+    @GetMapping("/api/universities/{universityId}/programs/short")
     public ResponseEntity<List<ProgramListItemResponse>> getShortProgramsForUniversity(
             @PathVariable Long universityId
     ) {
@@ -83,7 +94,7 @@ public class ProgramController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{universityId}/programs/{programId}/disciplines")
+    @GetMapping("/api/universities/{universityId}/programs/{programId}/disciplines")
     public ResponseEntity<List<DisciplineResponse>> getProgramDisciplines(
             @PathVariable Long universityId,
             @PathVariable Long programId

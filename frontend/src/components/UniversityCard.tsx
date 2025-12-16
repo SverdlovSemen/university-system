@@ -8,14 +8,16 @@ import { getUniversityPrograms } from '../api/universityApi';
 interface UniversityCardProps {
     university: UniversityResponse;
     hideDetailsButton?: boolean;
+    hideFavoriteButton?: boolean;
 }
 
-const UniversityCard: React.FC<UniversityCardProps> = ({ university, hideDetailsButton }) => {
+const UniversityCard: React.FC<UniversityCardProps> = ({ university, hideDetailsButton, hideFavoriteButton }) => {
     const {
         isAuthenticated,
         addFavoriteUniversity,
         removeFavoriteUniversity,
-        user
+        user,
+        refreshUserProfile
     } = useAuth();
     const navigate = useNavigate();
     const [isFavorite, setIsFavorite] = useState(false);
@@ -24,7 +26,12 @@ const UniversityCard: React.FC<UniversityCardProps> = ({ university, hideDetails
 
     useEffect(() => {
         if (user && user.favoriteUniversities) {
-            setIsFavorite(user.favoriteUniversities.includes(university.id));
+            const isCurrentlyFavorite = user.favoriteUniversities.includes(university.id);
+            console.log(`🏛️ Университет ${university.id}: избранное = ${isCurrentlyFavorite}`, {
+                universityId: university.id,
+                favoriteIds: user.favoriteUniversities
+            });
+            setIsFavorite(isCurrentlyFavorite);
         }
     }, [user, university.id]);
 
@@ -80,18 +87,22 @@ const UniversityCard: React.FC<UniversityCardProps> = ({ university, hideDetails
         navigate(`/university/${university.id}`);
     };
 
-    const handleFavoriteClick = () => {
+    const handleFavoriteClick = async () => {
         if (!isAuthenticated) {
             navigate('/login');
             return;
         }
 
-        if (isFavorite) {
-            removeFavoriteUniversity(university.id);
-        } else {
-            addFavoriteUniversity(university.id);
+        try {
+            if (isFavorite) {
+                await removeFavoriteUniversity(university.id);
+            } else {
+                await addFavoriteUniversity(university.id);
+            }
+            // Состояние обновится автоматически через useEffect при изменении user в AuthContext
+        } catch (error) {
+            console.error('Ошибка обновления избранного:', error);
         }
-        setIsFavorite(!isFavorite);
     };
 
     return (
@@ -124,7 +135,7 @@ const UniversityCard: React.FC<UniversityCardProps> = ({ university, hideDetails
                             Подробнее
                         </Button>
                     )}
-                    {isAuthenticated && (
+                    {isAuthenticated && !hideFavoriteButton && (
                         <Button
                             variant={isFavorite ? "warning" : "outline-secondary"}
                             size="sm"

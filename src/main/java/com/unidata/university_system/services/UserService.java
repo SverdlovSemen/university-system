@@ -41,7 +41,10 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
-        user.getFavoriteUniversities().removeIf(fu -> fu.getUniversityId().equals(universityId));
+        System.out.println("🔍 UserService: до удаления, избранных университетов: " + user.getFavoriteUniversities().size());
+        boolean removed = user.getFavoriteUniversities().removeIf(fu -> fu.getUniversityId().equals(universityId));
+        System.out.println("🗑️ UserService: удалено элементов: " + (removed ? 1 : 0));
+        System.out.println("🔍 UserService: после удаления, избранных университетов: " + user.getFavoriteUniversities().size());
         userRepository.save(user);
     }
 
@@ -78,7 +81,10 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
-        user.getFavoritePrograms().removeIf(fp -> fp.getProgramId().equals(programId));
+        System.out.println("🔍 UserService: до удаления, избранных программ: " + user.getFavoritePrograms().size());
+        boolean removed = user.getFavoritePrograms().removeIf(fp -> fp.getProgramId().equals(programId));
+        System.out.println("🗑️ UserService: удалено элементов: " + (removed ? 1 : 0));
+        System.out.println("🔍 UserService: после удаления, избранных программ: " + user.getFavoritePrograms().size());
         userRepository.save(user);
     }
 
@@ -92,23 +98,5 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    // Методы для обратной совместимости (если где-то используется старый API)
-    @Deprecated
-    public void addFavoriteSpecialty(Long userId, Long specialtyId) {
-        // Старый метод больше не поддерживается, так как теперь используются программы
-        throw new UnsupportedOperationException("Use addFavoriteProgram instead");
-    }
-
-    @Deprecated
-    public void removeFavoriteSpecialty(Long userId, Long specialtyId) {
-        // Старый метод больше не поддерживается
-        throw new UnsupportedOperationException("Use removeFavoriteProgram instead");
-    }
-
-    @Deprecated
-    @Transactional(readOnly = true)
-    public List<Specialty> getFavoriteSpecialties(Long userId) {
-        // Возвращаем пустой список, так как теперь используются программы
-        return List.of();
-    }
+    // Методы для работы со специальностями удалены - теперь работаем только с университетами и программами
 }

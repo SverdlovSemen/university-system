@@ -34,3 +34,9 @@ export const fetchProgramDisciplines = async (universityId: number, programId: n
     const response = await axios.get<DisciplineResponse[]>(`/api/universities/${universityId}/programs/${programId}/disciplines`);
     return response.data;
 };
+
+export const getProgramById = async (programId: number): Promise<ProgramResponse> => {
+    const response = await axios.get<ProgramResponse>(`/api/programs/${programId}`);
+    return response.data;
+};
+

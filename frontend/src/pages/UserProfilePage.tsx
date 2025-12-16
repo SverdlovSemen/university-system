@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Container, Card, Row, Col, Spinner, Button } from 'react-bootstrap';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { UniversityResponse, SpecialtyResponse } from '../types';
-import { getUniversityById } from '../api/universityApi';
-import { getSpecialtyById } from '../api/specialtyApi';
+import { UniversityResponse, ProgramResponse } from '../types';
+import { getUniversityById, fetchUniversities } from '../api/universityApi';
+import { getProgramById } from '../api/programApi';
+import UniversityCard from '../components/UniversityCard';
 
 const UserProfilePage = () => {
     const {
@@ -12,12 +13,13 @@ const UserProfilePage = () => {
         logout,
         loading: authLoading,
         removeFavoriteUniversity,
-        removeFavoriteSpecialty
-        , refreshUserProfile
+        removeFavoriteProgram,
+        refreshUserProfile
     } = useAuth();
     const navigate = useNavigate();
     const [favoriteUniversities, setFavoriteUniversities] = useState<UniversityResponse[]>([]);
-    const [favoriteSpecialties, setFavoriteSpecialties] = useState<SpecialtyResponse[]>([]);
+    const [favoritePrograms, setFavoritePrograms] = useState<ProgramResponse[]>([]);
+    const [allUniversities, setAllUniversities] = useState<UniversityResponse[]>([]);
     const [loadingFavorites, setLoadingFavorites] = useState(false);
 
     // Загрузка избранных университетов
@@ -45,50 +47,107 @@ const UserProfilePage = () => {
         loadUniversities();
     }, [user]);
 
-    // Загрузка избранных специальностей
+    // Загрузка всех университетов для поиска университета программы
+    useEffect(() => {
+        const loadAllUniversities = async () => {
+            try {
+                const universities = await fetchUniversities();
+                setAllUniversities(universities);
+                console.log("Загружены все университеты:", universities.length);
+            } catch (error) {
+                console.error('Ошибка загрузки университетов:', error);
+            }
+        };
+
+        loadAllUniversities();
+    }, []);
+
+    // Загрузка избранных программ и их университетов
     useEffect(() => {
         if (!user || !user.favoriteSpecialties) return;
 
-        const loadSpecialties = async () => {
+        const loadPrograms = async () => {
             setLoadingFavorites(true);
             try {
-                // Используем try/catch для каждого запроса
-                const loadedSpecialties: SpecialtyResponse[] = [];
+                const loadedPrograms: ProgramResponse[] = [];
 
                 for (const id of user.favoriteSpecialties) {
                     try {
-                        const specialty = await getSpecialtyById(id);
-                        loadedSpecialties.push(specialty);
+                        const program = await getProgramById(id);
+                        loadedPrograms.push(program);
                     } catch (error) {
-                        console.error(`Ошибка загрузки специальности ${id}:`, error);
+                        console.error(`Ошибка загрузки программы ${id}:`, error);
                     }
                 }
 
-                setFavoriteSpecialties(loadedSpecialties);
+                setFavoritePrograms(loadedPrograms);
             } catch (error) {
-                console.error('Общая ошибка загрузки специальностей:', error);
+                console.error('Общая ошибка загрузки программ:', error);
             } finally {
                 setLoadingFavorites(false);
             }
         };
 
-        loadSpecialties();
-    }, [user]);
+        loadPrograms();
+    }, [user, favoriteUniversities]); // Добавляем favoriteUniversities как зависимость
 
     useEffect(() => {
-        console.log("Загруженные специальности:", favoriteSpecialties);
-    }, [favoriteSpecialties]);
+        console.log("Загруженные программы:", favoritePrograms);
+    }, [favoritePrograms]);
 
-    // Функция для удаления университета из избранного
-    const handleRemoveUniversity = (universityId: number) => {
-        removeFavoriteUniversity(universityId);
-        setFavoriteUniversities(prev => prev.filter(u => u.id !== universityId));
+    // Функция для поиска университета программы по факультету
+    const findUniversityByFaculty = (program: ProgramResponse): UniversityResponse | null => {
+        // Поиск среди всех университетов
+        for (const university of allUniversities) {
+            // Поиск факультета в массиве факультетов университета
+            if (university.faculties) {
+                const facultyExists = university.faculties.some(faculty =>
+                    faculty.id === program.faculty.id ||
+                    faculty.fullName === program.faculty.fullName
+                );
+                if (facultyExists) {
+                    return university;
+                }
+            }
+
+            // Дополнительный поиск по частичному совпадению названий
+            if (university.abbreviation && program.faculty.fullName.includes(university.abbreviation)) {
+                return university;
+            }
+            if (university.fullName && program.faculty.fullName.includes(university.fullName.split(' ')[0])) {
+                return university;
+            }
+        }
+
+        console.warn(`Не найден университет для программы ${program.id}, факультет: ${program.faculty.fullName}`);
+        return null;
     };
 
-    // Функция для удаления специальности из избранного
-    const handleRemoveSpecialty = (specialtyId: number) => {
-        removeFavoriteSpecialty(specialtyId);
-        setFavoriteSpecialties(prev => prev.filter(s => s.id !== specialtyId));
+    // Функция для удаления университета из избранного
+    const handleRemoveUniversity = async (universityId: number) => {
+        try {
+            await removeFavoriteUniversity(universityId);
+            // После успешного удаления на сервере и обновления контекста,
+            // useEffect, который следит за 'user', автоматически обновит список.
+        } catch (error) {
+            console.error('❌ Ошибка удаления университета из избранного:', error);
+            alert('Не удалось удалить университет из избранного. Попробуйте еще раз.');
+        }
+    };
+
+    // Функция для удаления программы из избранного
+    const handleRemoveProgram = async (programId: number) => {
+        try {
+            console.log(`🗑️ Удаляем программу ${programId} из избранного`);
+            await removeFavoriteProgram(programId);
+            // После успешного удаления и обновления контекста,
+            // useEffect, который следит за 'user', автоматически обновит список.
+            console.log(`✅ Запрос на удаление программы ${programId} отправлен`);
+
+        } catch (error) {
+            console.error('❌ Ошибка удаления программы из избранного:', error);
+            alert('Не удалось удалить программу из избранного. Попробуйте еще раз.');
+        }
     };
 
     if (authLoading) {
@@ -159,27 +218,11 @@ const UserProfilePage = () => {
                     ) : favoriteUniversities.length > 0 ? (
                         <Row>
                             {favoriteUniversities.map(university => (
-                                <Col key={university.id} md={6} className="mb-3">
-                                    <Card>
-                                        <Card.Body>
-                                            <Card.Title>{university.abbreviation || university.fullName}</Card.Title>
-                                            <Card.Subtitle className="mb-2 text-muted">
-                                                {university.city?.name}, {university.city?.region?.name}
-                                            </Card.Subtitle>
-                                            <Card.Text>
-                                                <strong>Тип:</strong> {university.type}
-                                                <br />
-                                                <strong>Средний балл:</strong> {(university as any).avgEgeScore ?? 'не указан'}
-                                            </Card.Text>
-                                            <Button
-                                                variant="danger"
-                                                size="sm"
-                                                onClick={() => handleRemoveUniversity(university.id)}
-                                            >
-                                                Удалить из избранного
-                                            </Button>
-                                        </Card.Body>
-                                    </Card>
+                                <Col key={university.id} lg={6} className="mb-3">
+                                    <div className="d-flex flex-column h-100">
+                                        <UniversityCard university={university} />
+
+                                    </div>
                                 </Col>
                             ))}
                         </Row>
@@ -193,43 +236,79 @@ const UserProfilePage = () => {
 
             <Card>
                 <Card.Header as="h5" className="bg-info text-white">
-                    Избранные специальности
+                    Избранные программы
                 </Card.Header>
                 <Card.Body>
                     {loadingFavorites ? (
                         <div className="text-center">
                             <Spinner animation="border" />
-                            <p className="mt-2">Загрузка избранных специальностей...</p>
+                            <p className="mt-2">Загрузка избранных программ...</p>
                         </div>
-                    ) : favoriteSpecialties.length > 0 ? (
-                        <div className="list-group">
-                            {favoriteSpecialties.map(specialty => (
-                                <div
-                                    key={specialty.id}
-                                    className="list-group-item"
-                                >
-                                    <div className="d-flex w-100 justify-content-between">
-                                        <div>
-                                            <h5 className="mb-1">{specialty.name}</h5>
-                                            <div className="mb-1"><small>Код: {specialty.programCode}</small></div>
-                                            <p className="mb-1">{specialty.description}</p>
-                                        </div>
-                                        <div>
-                                            <Button
-                                                variant="danger"
-                                                size="sm"
-                                                onClick={() => handleRemoveSpecialty(specialty.id)}
-                                            >
-                                                Удалить
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
+                    ) : favoritePrograms.length > 0 ? (
+                        <Row>
+                            {favoritePrograms.map(program => (
+                                <Col key={program.id} lg={6} className="mb-3">
+                                    <Card className="h-100">
+                                        <Card.Body>
+                                            <Card.Title className="mb-1">{program.specialty.name}</Card.Title>
+                                            <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.85rem' }}>
+                                                Код: {program.specialty.programCode} • {program.specialty.educationLevel}
+                                            </Card.Subtitle>
+                                            <Card.Text>
+                                                {(() => {
+                                                    const university = findUniversityByFaculty(program);
+                                                    return university ? (
+                                                        <div className="mb-1">
+                                                            <strong>Университет:</strong> {university.abbreviation || university.fullName}
+                                                        </div>
+                                                    ) : null;
+                                                })()}
+                                                <div className="mb-1">
+                                                    <strong>Факультет:</strong> {program.faculty.fullName}
+                                                </div>
+                                                {program.studyForm && (
+                                                    <div className="mb-1">
+                                                        <strong>Форма обучения:</strong> {program.studyForm}
+                                                    </div>
+                                                )}
+                                                {program.duration && (
+                                                    <div className="mb-2">
+                                                        <strong>Длительность:</strong> {program.duration} лет
+                                                    </div>
+                                                )}
+                                            </Card.Text>
+                                            <div className="d-flex justify-content-between">
+                                                <Button
+                                                    variant="outline-primary"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const university = findUniversityByFaculty(program);
+                                                        if (university) {
+                                                            navigate(`/university/${university.id}/program/${program.id}`);
+                                                        } else {
+                                                            console.error('Не удалось найти университет для программы:', program);
+                                                            alert('Не удалось найти университет для этой программы');
+                                                        }
+                                                    }}
+                                                >
+                                                    Подробнее
+                                                </Button>
+                                                <Button
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={() => handleRemoveProgram(program.id)}
+                                                >
+                                                    Удалить из избранного
+                                                </Button>
+                                            </div>
+                                        </Card.Body>
+                                    </Card>
+                                </Col>
                             ))}
-                        </div>
+                        </Row>
                     ) : (
                         <p className="text-center text-muted">
-                            У вас пока нет избранных специальностей. Начните добавлять их!
+                            У вас пока нет избранных программ. Начните добавлять их!
                         </p>
                     )}
                 </Card.Body>
@@ -239,3 +318,4 @@ const UserProfilePage = () => {
 };
 
 export default UserProfilePage;
+

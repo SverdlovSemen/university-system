@@ -10,6 +10,8 @@ import com.unidata.university_system.dto.AssignEditorRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.unidata.university_system.models.User;
 import com.unidata.university_system.models.UserStatus;
+import com.unidata.university_system.models.FavoriteUniversity;
+import com.unidata.university_system.models.FavoriteProgram;
 import com.unidata.university_system.repositories.RoleRepository;
 import com.unidata.university_system.repositories.UniversityEmployeeRepository;
 import com.unidata.university_system.repositories.UniversityRepository;
@@ -256,12 +258,22 @@ public class AuthController {
             response.put("firstName", user.getFirstName());
             response.put("email", user.getEmail());
             response.put("roles", List.of(user.getRole() != null ? user.getRole().getName() : "ROLE_USER"));
-            response.put("favoriteUniversities", List.of());
-            response.put("favoriteSpecialties", List.of());
+
+            // Получаем реальные избранные университеты
+            List<Long> favoriteUniversityIds = user.getFavoriteUniversities().stream()
+                    .map(FavoriteUniversity::getUniversityId)
+                    .toList();
+            response.put("favoriteUniversities", favoriteUniversityIds);
+
+            // Получаем реальные избранные программы (для совместимости называем их specialties)
+            List<Long> favoriteProgramIds = user.getFavoritePrograms().stream()
+                    .map(FavoriteProgram::getProgramId)
+                    .toList();
+            response.put("favoriteSpecialties", favoriteProgramIds);
 
             // Load university assignments explicitly to avoid lazy-loading issues
                 List<Long> employeeUniversityIds = universityEmployeeRepository.findByUserId(user.getId()).stream()
-                    .map(ue -> ue.getUniversityId())
+                    .map(UniversityEmployee::getUniversityId)
                     .toList();
             response.put("universityIds", employeeUniversityIds);
 

@@ -22,16 +22,16 @@ const UniversityPage = () => {
 
     const [facultySpecialties, setFacultySpecialties] = useState<Record<number, SpecialtyResponse[]>>({});
     const [loadingFacultySpecialties, setLoadingFacultySpecialties] = useState<number | null>(null);
+    const [isFavoriteUniversity, setIsFavoriteUniversity] = useState(false);
 
     const {
         isAuthenticated,
         addFavoriteUniversity,
         removeFavoriteUniversity,
-        addFavoriteSpecialty,
-        removeFavoriteSpecialty,
+        addFavoriteProgram,
+        removeFavoriteProgram,
         user
     } = useAuth();
-    const [isFavoriteUniversity, setIsFavoriteUniversity] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -104,21 +104,26 @@ const UniversityPage = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [university]);
 
-    const isFavoriteSpecialty = (specialtyId: number) => {
-        return user?.favoriteSpecialties?.includes(specialtyId) || false;
+    const isFavoriteProgram = (programId: number) => {
+        return user?.favoriteSpecialties?.includes(programId) || false;
     };
 
-    const handleSpecialtyFavorite = (specialtyId: number, e: React.MouseEvent) => {
+    const handleProgramFavorite = async (programId: number, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!isAuthenticated) {
             navigate('/login');
             return;
         }
 
-        if (isFavoriteSpecialty(specialtyId)) {
-            removeFavoriteSpecialty(specialtyId);
-        } else {
-            addFavoriteSpecialty(specialtyId);
+        try {
+            if (isFavoriteProgram(programId)) {
+                await removeFavoriteProgram(programId);
+            } else {
+                await addFavoriteProgram(programId);
+            }
+            // После обновления в AuthContext, isFavoriteProgram() будет возвращать актуальное значение
+        } catch (error) {
+            console.error('❌ Ошибка обновления избранной программы:', error);
         }
     };
 
@@ -236,8 +241,8 @@ const UniversityPage = () => {
                                                 </div>
                                                 <div>
                                                     {isAuthenticated && (
-                                                        <Button variant={isFavoriteSpecialty(prog.specialty.id) ? "warning" : "outline-secondary"} size="sm" className="me-2" onClick={(e) => { e.stopPropagation(); handleSpecialtyFavorite(prog.specialty.id, e); }}>
-                                                            {isFavoriteSpecialty(prog.specialty.id) ? '★' : '☆'}
+                                                        <Button variant={isFavoriteProgram(prog.id) ? "warning" : "outline-secondary"} size="sm" className="me-2" onClick={(e) => { e.stopPropagation(); handleProgramFavorite(prog.id, e); }}>
+                                                            {isFavoriteProgram(prog.id) ? '★' : '☆'}
                                                         </Button>
                                                     )}
                                                     <Button variant="outline-info" size="sm" onClick={(e) => { e.stopPropagation(); goToProgram(prog.id); }}>

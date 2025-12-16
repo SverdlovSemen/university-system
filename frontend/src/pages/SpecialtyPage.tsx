@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Card, Spinner, ListGroup, Button, Alert, Badge, Row, Col } from 'react-bootstrap';
+import { Container, Card, Spinner, Button, Alert, Badge, Row, Col } from 'react-bootstrap';
 import { getSpecialtyById } from '../api/specialtyApi';
 import { fetchUniversitiesBySpecialty } from '../api/universityApi';
 import { SpecialtyResponse, UniversityResponse, SubjectResponse } from '../types';
 import { useAuth } from '../hooks/useAuth';
+import UniversityCard from '../components/UniversityCard';
 
 
 const SpecialtyPage = () => {
@@ -17,33 +18,9 @@ const SpecialtyPage = () => {
 
     const {
         isAuthenticated,
-        addFavoriteSpecialty,
-        removeFavoriteSpecialty,
         user
     } = useAuth();
-    const [isFavorite, setIsFavorite] = useState(false);
-
-    useEffect(() => {
-        if (user && user.favoriteSpecialties && specialty) {
-            setIsFavorite(user.favoriteSpecialties.includes(specialty.id));
-        }
-    }, [user, specialty]);
-
-    const handleFavoriteClick = () => {
-        if (!isAuthenticated) {
-            navigate('/login');
-            return;
-        }
-
-        if (!specialty) return;
-
-        if (isFavorite) {
-            removeFavoriteSpecialty(specialty.id);
-        } else {
-            addFavoriteSpecialty(specialty.id);
-        }
-        setIsFavorite(!isFavorite);
-    };
+    // Убираем функционал избранных специальностей - добавлять в избранное можно только университеты и программы
 
     useEffect(() => {
         let isMounted = true;
@@ -126,17 +103,7 @@ const SpecialtyPage = () => {
 
             <Card className="mb-4 border-primary">
                 <Card.Header className="bg-primary text-white">
-                    <div className="d-flex justify-content-between align-items-center">
-                        <Card.Title className="mb-0">{specialty.name}</Card.Title>
-                        {isAuthenticated && (
-                            <Button
-                                variant={isFavorite ? "warning" : "outline-light"}
-                                onClick={handleFavoriteClick}
-                            >
-                                {isFavorite ? '★ В избранном' : '☆ Добавить в избранное'}
-                            </Button>
-                        )}
-                    </div>
+                    <Card.Title className="mb-0">{specialty.name}</Card.Title>
                 </Card.Header>
                 <Card.Body>
                     <Row>
@@ -158,17 +125,7 @@ const SpecialtyPage = () => {
                                 </div>
                             </div>
                         </Col>
-                        <Col md={4} className="d-flex align-items-center justify-content-end">
-                            <div className="bg-light p-3 rounded text-center">
-                                <h6>Поделиться специальностью</h6>
-                                <Button variant="outline-secondary" size="sm" className="me-2">
-                                    Копировать ссылку
-                                </Button>
-                                <Button variant="outline-secondary" size="sm">
-                                    Сохранить
-                                </Button>
-                            </div>
-                        </Col>
+
                     </Row>
                 </Card.Body>
             </Card>
@@ -183,40 +140,13 @@ const SpecialtyPage = () => {
                             Нет университетов, предлагающих эту специальность
                         </Alert>
                     ) : (
-                        <ListGroup variant="flush">
+                        <Row>
                             {universities.map(university => (
-                                <ListGroup.Item
-                                    key={university.id}
-                                    action
-                                    onClick={() => navigate(`/university/${university.id}`)}
-                                    className="py-3"
-                                >
-                                    <div className="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            {/* Исправлено: используем shortName и fullName */}
-                                            <h5 className="mb-1">{university.abbreviation || university.fullName}</h5>
-                                            <div className="text-muted small">{university.fullName}</div>
-                                            <div className="text-muted">
-                                                {university.city?.name}, {university.city?.region?.name}
-                                            </div>
-                                            <div className="mt-1">
-                                                <span className="badge bg-secondary me-2">
-                                                    Средний балл: {(university as any).avgEgeScore ?? 'Н/Д'}
-                                                </span>
-                                                <span className="badge bg-secondary">
-                                                    Рейтинг: {(university as any).countryRanking ?? 'Н/Д'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <Button variant="outline-primary">
-                                                Подробнее
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </ListGroup.Item>
+                                <Col key={university.id} md={6} lg={4} className="mb-3">
+                                    <UniversityCard university={university} />
+                                </Col>
                             ))}
-                        </ListGroup>
+                        </Row>
                     )}
                 </Card.Body>
             </Card>
