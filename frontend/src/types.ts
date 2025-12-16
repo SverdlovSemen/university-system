@@ -102,6 +102,20 @@ export interface ProgramListItemResponse {
     specialty: SpecialtyShortResponse;
 }
 
+export interface InfrastructureTypeResponse {
+    id: number;
+    name: string;
+    description?: string;
+}
+
+export interface InfrastructureResponse {
+    id: number;
+    name: string;
+    description?: string;
+    address?: string;
+    type?: InfrastructureTypeResponse;
+}
+
 // Типы для запросов
 export interface SpecialtyRequest {
     id: number;

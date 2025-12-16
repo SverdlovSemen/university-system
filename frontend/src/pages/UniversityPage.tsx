@@ -6,10 +6,11 @@ import {
 } from 'react-bootstrap';
 import { getUniversityById } from '../api/universityApi';
 import { fetchProgramsByUniversity, ProgramListItemResponse } from '../api/programApi';
-import {UniversityResponse, ProgramResponse, SpecialtyResponse} from '../types';
+import {UniversityResponse, ProgramResponse, SpecialtyResponse, InfrastructureResponse} from '../types';
 import { useAuth } from '../hooks/useAuth';
 import {fetchSpecialtiesByUniversity} from "../api/specialtyApi";
 import UniversityCard from '../components/UniversityCard';
+import { fetchInfrastructureByUniversity } from '../api/infrastructureApi';
 
 const UniversityPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -23,6 +24,9 @@ const UniversityPage = () => {
     const [facultySpecialties, setFacultySpecialties] = useState<Record<number, SpecialtyResponse[]>>({});
     const [loadingFacultySpecialties, setLoadingFacultySpecialties] = useState<number | null>(null);
     const [isFavoriteUniversity, setIsFavoriteUniversity] = useState(false);
+    const [infrastructure, setInfrastructure] = useState<InfrastructureResponse[]>([]);
+    const [infrastructureLoading, setInfrastructureLoading] = useState(false);
+    const [infrastructureError, setInfrastructureError] = useState<string | null>(null);
 
     const {
         isAuthenticated,
@@ -59,6 +63,28 @@ const UniversityPage = () => {
         loadData();
         return () => { isMounted = false; };
     }, [id, navigate]);
+
+    useEffect(() => {
+        if (!id) return;
+        let isMounted = true;
+        const loadInfrastructure = async () => {
+            setInfrastructureLoading(true);
+            try {
+                const infraData = await fetchInfrastructureByUniversity(parseInt(id));
+                if (isMounted) {
+                    setInfrastructure(infraData);
+                    setInfrastructureError(null);
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки инфраструктуры', error);
+                if (isMounted) setInfrastructureError('Не удалось загрузить инфраструктуру');
+            } finally {
+                if (isMounted) setInfrastructureLoading(false);
+            }
+        };
+        loadInfrastructure();
+        return () => { isMounted = false; };
+    }, [id]);
 
     useEffect(() => {
         if (user && user.favoriteUniversities && university) {
@@ -255,6 +281,49 @@ const UniversityPage = () => {
                                 </ListGroup>
                             ) : (
                                 <p>Нет данных о программах</p>
+                            )}
+                        </Card.Body>
+                    </Card>
+                </Tab>
+
+                <Tab eventKey="infrastructure" title="Инфраструктура">
+                    <Card className="mt-3">
+                        <Card.Body>
+                            <h5>Инфраструктура университета</h5>
+                            {infrastructureLoading ? (
+                                <div className="text-center my-3">
+                                    <Spinner animation="border" />
+                                </div>
+                            ) : infrastructureError ? (
+                                <p className="text-danger">{infrastructureError}</p>
+                            ) : infrastructure.length > 0 ? (
+                                <ListGroup>
+                                    {infrastructure.map((item) => (
+                                        <ListGroup.Item key={item.id}>
+                                            <div className="d-flex flex-column flex-md-row justify-content-between">
+                                                <div>
+                                                    <strong>{item.name}</strong>
+                                                    {item.type?.name && (
+                                                        <div>Тип: {item.type.name}</div>
+                                                    )}
+                                                    {item.type?.description && (
+                                                        <div className="text-muted small">{item.type.description}</div>
+                                                    )}
+                                                </div>
+                                                <div className="mt-2 mt-md-0 text-md-end">
+                                                    {item.address && (
+                                                        <div><strong>Адрес:</strong> {item.address}</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {item.description && (
+                                                <div className="mt-2">{item.description}</div>
+                                            )}
+                                        </ListGroup.Item>
+                                    ))}
+                                </ListGroup>
+                            ) : (
+                                <p>Нет данных об инфраструктуре</p>
                             )}
                         </Card.Body>
                     </Card>
