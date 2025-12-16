@@ -59,6 +59,22 @@ public class SpecialtyController {
             @RequestParam(required = false) String level,
             @RequestParam(required = false) String form,
             @RequestParam(required = false) String subject) {
+
+        System.out.println("🎯 Контроллер /search получил параметры:");
+        System.out.println("  - query: " + query);
+        System.out.println("  - universityId: " + universityId);
+        System.out.println("  - level: " + level);
+        System.out.println("  - form: " + form);
+        System.out.println("  - subject: " + subject);
+
+        // Если передан только query без других параметров - используем быстрый поиск по коду/названию
+        if (query != null && !query.trim().isEmpty() &&
+            universityId == null && level == null && form == null && subject == null) {
+            System.out.println("✅ Используем быстрый поиск по коду/названию");
+            return specialtyService.searchSpecialtiesByCodeOrName(query.trim());
+        }
+
+        System.out.println("⚠️ Используем расширенный поиск");
         return specialtyService.searchSpecialties(
                 universityId,
                 query,

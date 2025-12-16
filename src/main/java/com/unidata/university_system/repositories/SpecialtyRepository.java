@@ -30,15 +30,19 @@ public interface SpecialtyRepository extends JpaRepository<Specialty, Long> {
 
     @Query("""
             SELECT DISTINCT s
-            FROM Program p
-            JOIN p.specialization s
+            FROM Specialty s
+            LEFT JOIN s.programs p
+            LEFT JOIN p.faculty f
             LEFT JOIN s.educationLevel el
             LEFT JOIN p.studyForm sf
             LEFT JOIN s.specializationSubjects ss
             LEFT JOIN ss.subject subj
-            WHERE (:universityId IS NULL OR p.faculty.university.id = :universityId)
-              AND (:query IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%'))
-                   OR LOWER(s.programCode) LIKE LOWER(CONCAT('%', :query, '%')))
+            WHERE (:universityId IS NULL OR f.university.id = :universityId)
+              AND (
+                    :query IS NULL
+                    OR LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                    OR LOWER(s.programCode) LIKE LOWER(CONCAT('%', :query, '%'))
+                  )
               AND (:level IS NULL OR LOWER(el.name) = LOWER(:level))
               AND (:form IS NULL OR LOWER(sf.name) = LOWER(:form))
               AND (:subject IS NULL OR LOWER(subj.name) = LOWER(:subject))
@@ -49,4 +53,12 @@ public interface SpecialtyRepository extends JpaRepository<Specialty, Long> {
             @Param("level") String level,
             @Param("form") String form,
             @Param("subject") String subject);
+
+    @Query("""
+            SELECT s
+            FROM Specialty s
+            WHERE LOWER(s.programCode) LIKE LOWER(CONCAT('%', :query, '%'))
+               OR LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%'))
+            """)
+    List<Specialty> findByCodeOrNameContainingIgnoreCase(@Param("query") String query);
 }

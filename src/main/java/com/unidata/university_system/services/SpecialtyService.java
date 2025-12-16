@@ -293,6 +293,31 @@ public class SpecialtyService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<SpecialtyResponse> searchSpecialtiesByCodeOrName(String query) {
+        System.out.println("🔍 Поиск специальностей по запросу: '" + query + "'");
+        List<Specialty> specialties = specialtyRepository.findByCodeOrNameContainingIgnoreCase(query);
+        System.out.println("✅ Найдено специальностей: " + specialties.size());
+
+        if (!specialties.isEmpty()) {
+            System.out.println("📋 Первые результаты:");
+            specialties.stream().limit(3).forEach(s ->
+                System.out.println("  - [" + s.getProgramCode() + "] " + s.getName())
+            );
+        }
+
+        return specialties.stream()
+                .map(spec -> specialtyMapper.fromSpecialty(
+                        spec,
+                        resolveFacultyIds(spec.getId()),
+                        subjectCombinationMapper.fromSpecializationSubjects(
+                                spec.getId(),
+                                new java.util.HashSet<>(specializationSubjectRepository.findBySpecializationId(spec.getId()))
+                        )
+                ))
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public List<Specialty> importSpecialties(MultipartFile file) throws Exception {
         List<Specialty> savedSpecialties = new ArrayList<>();
@@ -396,3 +421,4 @@ public class SpecialtyService {
                 .collect(Collectors.toList());
     }
 }
+

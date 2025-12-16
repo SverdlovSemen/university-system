@@ -7,7 +7,9 @@ export const searchSpecialties = async (query?: string): Promise<SpecialtyRespon
     const params = new URLSearchParams();
     if (query) params.append('query', query);
 
+    console.log('🌐 API: Отправляем запрос на', `${API_URL}/search?${params.toString()}`);
     const response = await axios.get(`${API_URL}/search`, { params });
+    console.log('📥 API: Получен ответ, статус:', response.status, 'данных:', response.data.length);
     return response.data;
 };
 

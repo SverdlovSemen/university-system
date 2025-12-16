@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Button, Card, Container, Row, Col, Form, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
@@ -28,7 +28,10 @@ const SearchPage = () => {
     const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
     const [minScore, setMinScore] = useState<number | null>(null);
     const [maxScore, setMaxScore] = useState<number | null>(null);
-    const [selectedSpecialties, setSelectedSpecialties] = useState<SelectOption[]>([]);
+    const [specialtyQuery, setSpecialtyQuery] = useState<string>('');
+    const [specialtyResults, setSpecialtyResults] = useState<SpecialtyResponse[]>([]);
+    const [selectedSpecialty, setSelectedSpecialty] = useState<SelectOption | null>(null);
+    const [isSpecialtySearching, setIsSpecialtySearching] = useState(false);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -46,14 +49,52 @@ const SearchPage = () => {
         loadInitialData();
     }, []);
 
-    // Функция для загрузки опций специальностей
-    const loadSpecialtyOptions = (inputValue: string): Promise<SelectOption[]> => {
-        return searchSpecialties(inputValue).then(specialties =>
-            specialties.map(s => ({
-                value: s.id,
-                label: `${s.programCode} - ${s.name}`
-            }))
-        );
+    const specialtySearch = useMemo(
+        () => debounce(async (value: string) => {
+            console.log('🔍 Фронтенд: Ищем специальности по запросу:', value);
+            try {
+                const specialties = await searchSpecialties(value);
+                console.log('✅ Фронтенд: Получено специальностей:', specialties.length);
+                if (specialties.length > 0) {
+                    console.log('📋 Первые результаты:', specialties.slice(0, 3).map(s => `[${s.programCode}] ${s.name}`));
+                }
+                setSpecialtyResults(specialties);
+            } catch (error) {
+                console.error('❌ Ошибка поиска специальностей', error);
+                setSpecialtyResults([]);
+            } finally {
+                setIsSpecialtySearching(false);
+            }
+        }, 300),
+        []
+    );
+
+    useEffect(() => () => specialtySearch.cancel(), [specialtySearch]);
+
+    const handleSpecialtyInputChange = (value: string) => {
+        setSpecialtyQuery(value);
+        if (selectedSpecialty && value !== selectedSpecialty.label) {
+            setSelectedSpecialty(null);
+        }
+
+        const trimmed = value.trim();
+        if (trimmed.length < 2) {
+            specialtySearch.cancel();
+            setSpecialtyResults([]);
+            setIsSpecialtySearching(false);
+            return;
+        }
+
+        setIsSpecialtySearching(true);
+        specialtySearch(trimmed);
+    };
+
+    const handleSpecialtySelect = (specialty: SpecialtyResponse) => {
+        const label = `${specialty.programCode ?? ''} - ${specialty.name}`.trim();
+        setSelectedSpecialty({ value: specialty.id, label });
+        setSpecialtyQuery(label);
+        setSpecialtyResults([]);
+        setIsSpecialtySearching(false);
     };
 
     // Функция для загрузки опций университетов с debounce
@@ -77,13 +118,13 @@ const SearchPage = () => {
             const regionParam = selectedRegion !== null ? selectedRegion : undefined;
             const minScoreParam = minScore !== null ? minScore : undefined;
             const maxScoreParam = maxScore !== null ? maxScore : undefined;
-            const specialtyIds = selectedSpecialties.map(option => option.value);
+            const specialtyIds = selectedSpecialty ? [selectedSpecialty.value] : undefined;
 
             const results = await fetchUniversities(
                 nameQuery.trim() || undefined,
                 regionParam,
                 undefined,
-                specialtyIds.length > 0 ? specialtyIds : undefined,
+                specialtyIds,
                 minScoreParam,
                 maxScoreParam
             );
@@ -155,27 +196,43 @@ const SearchPage = () => {
                     </Col>
 
                     <Col md={4}>
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-3 position-relative">
                             <Form.Label>Специальности</Form.Label>
-                            <AsyncSelect
-                                isMulti
-                                cacheOptions
-                                defaultOptions
-                                loadOptions={loadSpecialtyOptions}
-                                value={selectedSpecialties}
-                                onChange={(selected) => setSelectedSpecialties(selected as SelectOption[])}
+                            <Form.Control
+                                type="text"
                                 placeholder="Поиск по коду или названию..."
-                                noOptionsMessage={({ inputValue }) =>
-                                    inputValue ? "Ничего не найдено" : "Введите для поиска"
-                                }
-                                loadingMessage={() => "Загрузка..."}
-                                styles={{
-                                    control: (base) => ({
-                                        ...base,
-                                        minHeight: '38px',
-                                    }),
-                                }}
+                                value={specialtyQuery}
+                                onChange={(e) => handleSpecialtyInputChange(e.target.value)}
                             />
+                            <Form.Text className="text-muted">
+                                Начните ввод (минимум 2 символа) и выберите одну специальность из списка
+                            </Form.Text>
+                            {(specialtyResults.length > 0 || (isSpecialtySearching && specialtyQuery.trim().length >= 2)) && (
+                                <div
+                                    className="border rounded bg-white mt-1 shadow-sm"
+                                    style={{ maxHeight: '220px', overflowY: 'auto', zIndex: 2, position: 'absolute', width: '100%' }}
+                                >
+                                    {isSpecialtySearching ? (
+                                        <div className="text-center py-2">
+                                            <Spinner animation="border" size="sm" /> Поиск специальностей...
+                                        </div>
+                                    ) : (
+                                        specialtyResults.map((spec) => (
+                                            <Button
+                                                key={spec.id}
+                                                variant="light"
+                                                className="w-100 text-start border-bottom rounded-0"
+                                                onClick={() => handleSpecialtySelect(spec)}
+                                            >
+                                                <strong>{spec.programCode || 'Без кода'}</strong> - {spec.name}
+                                            </Button>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                            {!isSpecialtySearching && !selectedSpecialty && specialtyQuery.trim().length >= 2 && specialtyResults.length === 0 && (
+                                <div className="text-muted small mt-1">Ничего не найдено</div>
+                            )}
                         </Form.Group>
                     </Col>
 
@@ -254,3 +311,4 @@ const SearchPage = () => {
 };
 
 export default SearchPage;
+
