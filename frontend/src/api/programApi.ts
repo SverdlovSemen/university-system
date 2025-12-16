@@ -1,4 +1,4 @@
-import { ProgramResponse } from '../types';
+import { DisciplineResponse, ProgramResponse } from '../types';
 import axios from 'axios';
 
 export interface FacultyShortResponse {
@@ -27,5 +27,10 @@ export const fetchProgramsByUniversity = async (universityId: number): Promise<P
 
 export const fetchProgramDetailsByUniversity = async (universityId: number): Promise<ProgramResponse[]> => {
     const response = await axios.get<ProgramResponse[]>(`/api/universities/${universityId}/programs`);
+    return response.data;
+};
+
+export const fetchProgramDisciplines = async (universityId: number, programId: number): Promise<DisciplineResponse[]> => {
+    const response = await axios.get<DisciplineResponse[]>(`/api/universities/${universityId}/programs/${programId}/disciplines`);
     return response.data;
 };

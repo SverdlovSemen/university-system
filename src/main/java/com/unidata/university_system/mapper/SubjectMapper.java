@@ -5,6 +5,7 @@ import com.unidata.university_system.dto.SubjectResponse;
 import com.unidata.university_system.models.Subject;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,7 +25,9 @@ public class SubjectMapper {
         if (subject == null) return null;
         return new SubjectResponse(
                 subject.getId(),
-                subject.getName()
+                subject.getName(),
+                null,
+                null
         );
     }
 

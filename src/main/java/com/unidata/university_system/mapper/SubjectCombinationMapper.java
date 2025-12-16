@@ -24,7 +24,7 @@ public class SubjectCombinationMapper {
         List<SubjectResponse> subjects = specializationSubjects.stream()
                 .map(SpecializationSubject::getSubject)
                 .filter(subject -> subject != null)
-                .map(subject -> new SubjectResponse(subject.getId(), subject.getName()))
+                .map(subject -> new SubjectResponse(subject.getId(), subject.getName(), null, null))
                 .collect(Collectors.toList());
 
         return List.of(new SubjectCombinationResponse(

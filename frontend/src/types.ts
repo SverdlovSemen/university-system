@@ -44,6 +44,8 @@ export interface UniversityResponse {
 export interface SubjectResponse {
     id: number;
     name: string;
+    examNumber?: number;
+    minScore?: number;
 }
 
 export interface SpecialtyResponse {
@@ -71,6 +73,7 @@ export interface AdmissionConditionResponse {
     subjects: SubjectResponse[];
     admissionFee?: number; // стоимость поступления
     hasDvi?: boolean; // наличие ДВИ
+    minScore?: number; // минимальный балл (добавлено)
 }
 
 export interface ProgramResponse {
@@ -84,6 +87,13 @@ export interface ProgramResponse {
     teachingLanguage?: string; // поле для языка обучения как на бэкенде
     admissionConditions: AdmissionConditionResponse[];
     subjects: SubjectResponse[];
+}
+
+export interface DisciplineResponse {
+    id: number;
+    name: string;
+    semester: number;
+    totalHours: number;
 }
 
 export interface ProgramListItemResponse {

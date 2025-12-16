@@ -61,7 +61,7 @@ public class SpecialtyMapper {
         List<SubjectResponse> subjects = specializationSubjects.stream()
                 .map(SpecializationSubject::getSubject)
                 .filter(subject -> subject != null)
-                .map(subject -> new SubjectResponse(subject.getId(), subject.getName()))
+                .map(subject -> new SubjectResponse(subject.getId(), subject.getName(), null, null))
                 .toList();
 
         SubjectCombinationResponse combination = new SubjectCombinationResponse(

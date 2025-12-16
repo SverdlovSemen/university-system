@@ -1,5 +1,5 @@
 import React from 'react';
-import { AdmissionConditionResponse } from '../types';
+import { AdmissionConditionResponse, SubjectResponse } from '../types';
 import { Card, Table } from 'react-bootstrap';
 
 interface Props {
@@ -7,8 +7,7 @@ interface Props {
 }
 
 const AdmissionConditionCard: React.FC<Props> = ({ condition }) => {
-    // Сортировка предметов по exam_number (если есть)
-    const sortedSubjects = [...(condition.subjects || [])].sort((a: any, b: any) => {
+    const sortedSubjects = [...(condition.subjects || [])].sort((a, b) => {
         if (a.examNumber !== undefined && b.examNumber !== undefined) {
             return a.examNumber - b.examNumber;
         }
@@ -33,14 +32,16 @@ const AdmissionConditionCard: React.FC<Props> = ({ condition }) => {
                                 <th>№</th>
                                 <th>Название</th>
                                 <th>Приоритет</th>
+                                <th>Минимальный балл</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {sortedSubjects.map((subj: any, idx) => (
+                            {sortedSubjects.map((subj: SubjectResponse, idx) => (
                                 <tr key={subj.id}>
                                     <td>{idx + 1}</td>
                                     <td>{subj.name}</td>
                                     <td>{subj.examNumber ?? '—'}</td>
+                                    <td>{subj.minScore ?? '—'}</td>
                                 </tr>
                             ))}
                         </tbody>

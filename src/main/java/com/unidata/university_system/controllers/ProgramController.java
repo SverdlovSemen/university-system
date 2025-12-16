@@ -1,13 +1,15 @@
 package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.AdmissionConditionResponse;
-import com.unidata.university_system.dto.ProgramResponse;
-import com.unidata.university_system.dto.SubjectResponse;
-import com.unidata.university_system.dto.ProgramListItemResponse;
+import com.unidata.university_system.dto.DisciplineResponse;
 import com.unidata.university_system.dto.FacultyShortResponse;
+import com.unidata.university_system.dto.ProgramListItemResponse;
+import com.unidata.university_system.dto.ProgramResponse;
 import com.unidata.university_system.dto.SpecialtyShortResponse;
+import com.unidata.university_system.dto.SubjectResponse;
 import com.unidata.university_system.models.Program;
 import com.unidata.university_system.repositories.ProgramRepository;
+import com.unidata.university_system.services.ProgramService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,7 +17,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -23,10 +27,12 @@ import java.util.stream.Collectors;
 public class ProgramController {
 
     private final ProgramRepository programRepository;
+    private final ProgramService programService;
 
     @Autowired
-    public ProgramController(ProgramRepository programRepository) {
+    public ProgramController(ProgramRepository programRepository, ProgramService programService) {
         this.programRepository = programRepository;
+        this.programService = programService;
     }
 
     @GetMapping("/{universityId}/programs/{specialtyId}")
@@ -36,53 +42,9 @@ public class ProgramController {
     ) {
         List<Program> programs = programRepository.findBySpecializationId(specialtyId).stream()
                 .filter(p -> p.getFaculty() != null && p.getFaculty().getUniversity() != null && p.getFaculty().getUniversity().getId().equals(universityId))
-                .collect(Collectors.toList());
+                .toList();
 
-        List<ProgramResponse> response = programs.stream().map(p -> {
-            var admission = p.getAdmissionConditions().stream().map(ac -> {
-                List<SubjectResponse> subjects = ac.getProgramSubjects().stream()
-                        .map(ps -> new SubjectResponse(ps.getSubject().getId(), ps.getSubject().getName()))
-                        .collect(Collectors.toList());
-                return new AdmissionConditionResponse(
-                        ac.getYear(),
-                        ac.getPassingScore(),
-                        ac.getBudgetPlaces(),
-                        ac.getTargetedPlaces(),
-                        ac.getPaidPlaces(),
-                        subjects,
-                        ac.getAdmissionFee(),
-                        ac.getHasDvi()
-                );
-            }).collect(Collectors.toList());
-
-            List<SubjectResponse> progSubjects = p.getAdmissionConditions().stream()
-                    .flatMap(ac -> ac.getProgramSubjects().stream())
-                    .map(ps -> new SubjectResponse(ps.getSubject().getId(), ps.getSubject().getName()))
-                    .distinct()
-                    .collect(Collectors.toList());
-
-            return new ProgramResponse(
-                    p.getId(),
-                    new FacultyShortResponse(
-                            p.getFaculty().getId(),
-                            p.getFaculty().getFullName(),
-                            p.getFaculty().getAbbreviation()
-                    ),
-                    new SpecialtyShortResponse(
-                            p.getSpecialization().getId(),
-                            p.getSpecialization().getName(),
-                            p.getSpecialization().getProgramCode(),
-                            p.getSpecialization().getEducationLevel() != null ? p.getSpecialization().getEducationLevel().getName() : null
-                    ),
-                    p.getProgramDescription(),
-                    p.getStudyForm() != null ? p.getStudyForm().getName() : null,
-                    p.getDuration(),
-                    Boolean.TRUE.equals(p.getMobilityOption()),
-                    p.getTeachingLanguage(),
-                    admission,
-                    progSubjects
-            );
-        }).collect(Collectors.toList());
+        List<ProgramResponse> response = programs.stream().map(this::mapProgram).toList();
 
         return ResponseEntity.ok(response);
     }
@@ -92,51 +54,7 @@ public class ProgramController {
             @PathVariable Long universityId
     ) {
         List<Program> programs = programRepository.findByFacultyUniversityId(universityId);
-        List<ProgramResponse> response = programs.stream().map(p -> {
-            var admission = p.getAdmissionConditions().stream().map(ac -> {
-                List<SubjectResponse> subjects = ac.getProgramSubjects().stream()
-                        .map(ps -> new SubjectResponse(ps.getSubject().getId(), ps.getSubject().getName()))
-                        .collect(Collectors.toList());
-                return new AdmissionConditionResponse(
-                        ac.getYear(),
-                        ac.getPassingScore(),
-                        ac.getBudgetPlaces(),
-                        ac.getTargetedPlaces(),
-                        ac.getPaidPlaces(),
-                        subjects,
-                        ac.getAdmissionFee(),
-                        ac.getHasDvi()
-                );
-            }).collect(Collectors.toList());
-
-            List<SubjectResponse> progSubjects = p.getAdmissionConditions().stream()
-                    .flatMap(ac -> ac.getProgramSubjects().stream())
-                    .map(ps -> new SubjectResponse(ps.getSubject().getId(), ps.getSubject().getName()))
-                    .distinct()
-                    .collect(Collectors.toList());
-
-            return new ProgramResponse(
-                    p.getId(),
-                    new FacultyShortResponse(
-                            p.getFaculty().getId(),
-                            p.getFaculty().getFullName(),
-                            p.getFaculty().getAbbreviation()
-                    ),
-                    new SpecialtyShortResponse(
-                            p.getSpecialization().getId(),
-                            p.getSpecialization().getName(),
-                            p.getSpecialization().getProgramCode(),
-                            p.getSpecialization().getEducationLevel() != null ? p.getSpecialization().getEducationLevel().getName() : null
-                    ),
-                    p.getProgramDescription(),
-                    p.getStudyForm() != null ? p.getStudyForm().getName() : null,
-                    p.getDuration(),
-                    Boolean.TRUE.equals(p.getMobilityOption()),
-                    p.getTeachingLanguage(),
-                    admission,
-                    progSubjects
-            );
-        }).collect(Collectors.toList());
+        List<ProgramResponse> response = programs.stream().map(this::mapProgram).toList();
 
         return ResponseEntity.ok(response);
     }
@@ -163,5 +81,77 @@ public class ProgramController {
                 )
         ).toList();
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{universityId}/programs/{programId}/disciplines")
+    public ResponseEntity<List<DisciplineResponse>> getProgramDisciplines(
+            @PathVariable Long universityId,
+            @PathVariable Long programId
+    ) {
+        Optional<Program> programOpt = programRepository.findById(programId);
+        if (programOpt.isEmpty() || programOpt.get().getFaculty() == null ||
+                programOpt.get().getFaculty().getUniversity() == null ||
+                !programOpt.get().getFaculty().getUniversity().getId().equals(universityId)) {
+            return ResponseEntity.notFound().build();
+        }
+        List<DisciplineResponse> disciplines = programService.getDisciplinesForProgram(programId);
+        return ResponseEntity.ok(disciplines);
+    }
+
+    private ProgramResponse mapProgram(Program p) {
+        var admission = p.getAdmissionConditions().stream().map(ac -> {
+            List<SubjectResponse> subjects = ac.getProgramSubjects().stream()
+                    .map(ps -> new SubjectResponse(
+                            ps.getSubject().getId(),
+                            ps.getSubject().getName(),
+                            ps.getExamNumber(),
+                            ps.getMinScore()
+                    ))
+                    .sorted(Comparator.comparing(subject -> subject.examNumber() == null ? Integer.MAX_VALUE : subject.examNumber()))
+                    .toList();
+            return new AdmissionConditionResponse(
+                    ac.getYear(),
+                    ac.getPassingScore(),
+                    ac.getBudgetPlaces(),
+                    ac.getTargetedPlaces(),
+                    ac.getPaidPlaces(),
+                    subjects,
+                    ac.getAdmissionFee(),
+                    ac.getHasDvi()
+            );
+        }).toList();
+
+        List<SubjectResponse> progSubjects = p.getAdmissionConditions().stream()
+                .flatMap(ac -> ac.getProgramSubjects().stream())
+                .map(ps -> new SubjectResponse(
+                        ps.getSubject().getId(),
+                        ps.getSubject().getName(),
+                        ps.getExamNumber(),
+                        ps.getMinScore()
+                ))
+                .distinct()
+                .toList();
+
+        return new ProgramResponse(
+                p.getId(),
+                new FacultyShortResponse(
+                        p.getFaculty().getId(),
+                        p.getFaculty().getFullName(),
+                        p.getFaculty().getAbbreviation()
+                ),
+                new SpecialtyShortResponse(
+                        p.getSpecialization().getId(),
+                        p.getSpecialization().getName(),
+                        p.getSpecialization().getProgramCode(),
+                        p.getSpecialization().getEducationLevel() != null ? p.getSpecialization().getEducationLevel().getName() : null
+                ),
+                p.getProgramDescription(),
+                p.getStudyForm() != null ? p.getStudyForm().getName() : null,
+                p.getDuration(),
+                Boolean.TRUE.equals(p.getMobilityOption()),
+                p.getTeachingLanguage(),
+                admission,
+                progSubjects
+        );
     }
 }

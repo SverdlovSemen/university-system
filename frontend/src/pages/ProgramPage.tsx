@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Container, Spinner, Tabs, Tab } from 'react-bootstrap';
-import { fetchProgramDetailsByUniversity } from '../api/programApi';
-import { ProgramResponse, UniversityResponse } from '../types';
+import { Container, Spinner, Tabs, Tab, Table } from 'react-bootstrap';
+import { fetchProgramDetailsByUniversity, fetchProgramDisciplines } from '../api/programApi';
+import { ProgramResponse, UniversityResponse, DisciplineResponse } from '../types';
 import { getUniversityById } from '../api/universityApi';
 import AdmissionConditionCard from '../components/AdmissionConditionCard';
 
@@ -12,6 +12,8 @@ const ProgramPage = () => {
     const [program, setProgram] = useState<ProgramResponse | null>(null);
     const [university, setUniversity] = useState<UniversityResponse | null>(null);
     const [activeTab, setActiveTab] = useState<string>('info');
+    const [disciplines, setDisciplines] = useState<DisciplineResponse[]>([]);
+    const [disciplinesLoading, setDisciplinesLoading] = useState<boolean>(false);
 
     useEffect(() => {
         let mounted = true;
@@ -38,6 +40,24 @@ const ProgramPage = () => {
             }
         };
         load();
+        return () => { mounted = false; };
+    }, [universityId, programId]);
+
+    useEffect(() => {
+        let mounted = true;
+        const loadDisciplines = async () => {
+            if (!universityId || !programId) return;
+            setDisciplinesLoading(true);
+            try {
+                const data = await fetchProgramDisciplines(Number(universityId), Number(programId));
+                if (mounted) setDisciplines(data);
+            } catch {
+                if (mounted) setDisciplines([]);
+            } finally {
+                if (mounted) setDisciplinesLoading(false);
+            }
+        };
+        loadDisciplines();
         return () => { mounted = false; };
     }, [universityId, programId]);
 
@@ -96,8 +116,30 @@ const ProgramPage = () => {
                 </Tab>
                 <Tab eventKey="disciplines" title="Дисциплины">
                     <div style={{ padding: 16 }}>
-                        {/* Здесь будет информация по дисциплинам */}
-                        <div>В разработке</div>
+                        {disciplinesLoading ? (
+                            <Spinner animation="border" size="sm" />
+                        ) : disciplines.length > 0 ? (
+                            <Table striped bordered hover size="sm">
+                                <thead>
+                                    <tr>
+                                        <th>Семестр</th>
+                                        <th>Название</th>
+                                        <th>Количество часов</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {disciplines.map(discipline => (
+                                        <tr key={discipline.id}>
+                                            <td>{discipline.semester}</td>
+                                            <td>{discipline.name}</td>
+                                            <td>{discipline.totalHours}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </Table>
+                        ) : (
+                            <div>Нет данных по дисциплинам</div>
+                        )}
                     </div>
                 </Tab>
             </Tabs>
