@@ -2,6 +2,7 @@ package com.unidata.university_system.services;
 
 import com.unidata.university_system.dto.UniversityApplicationRequest;
 import com.unidata.university_system.dto.UniversityApplicationResponse;
+import com.unidata.university_system.dto.UniversityApplicationWithUserResponse;
 import com.unidata.university_system.models.ApplicationStatus;
 import com.unidata.university_system.models.UniversityApplication;
 import com.unidata.university_system.models.User;
@@ -85,9 +86,21 @@ public class UniversityApplicationService {
 
         List<UniversityApplication> applications = applicationRepository.findByUserId(user.getId());
 
-        // Проверяем, есть ли заявки со статусом "не обработано"
+        // Проверяем, есть ли у пользователя какие-либо заявки
+        return !applications.isEmpty();
+    }
+
+    public List<UniversityApplicationWithUserResponse> getPendingApplications() {
+        log.info("Getting all pending university applications");
+
+        ApplicationStatus pendingStatus = statusRepository.findByName("не обработано")
+                .orElseThrow(() -> new RuntimeException("Статус 'не обработано' не найден"));
+
+        List<UniversityApplication> applications = applicationRepository.findByStatusId(pendingStatus.getId());
+
         return applications.stream()
-                .anyMatch(app -> "не обработано".equals(app.getStatus().getName()));
+                .map(this::mapToResponseWithUser)
+                .collect(Collectors.toList());
     }
 
     private UniversityApplicationResponse mapToResponse(UniversityApplication application) {
@@ -105,6 +118,85 @@ public class UniversityApplicationService {
         response.setProcessedBy(application.getProcessedBy() != null ? application.getProcessedBy().getId() : null);
         response.setProcessedAt(application.getProcessedAt());
         return response;
+    }
+
+    private UniversityApplicationWithUserResponse mapToResponseWithUser(UniversityApplication application) {
+        UniversityApplicationWithUserResponse response = new UniversityApplicationWithUserResponse();
+        response.setId(application.getId());
+        response.setUserId(application.getUser().getId());
+        response.setUserEmail(application.getUser().getEmail());
+        response.setFullName(application.getFullName());
+        response.setAbbreviation(application.getAbbreviation());
+        response.setWebsite(application.getWebsite());
+        response.setContactPersonName(application.getContactPersonName());
+        response.setContactPersonPosition(application.getContactPersonPosition());
+        response.setContactEmail(application.getContactEmail());
+        response.setContactPhone(application.getContactPhone());
+        response.setStatusName(application.getStatus().getName());
+        response.setProcessedBy(application.getProcessedBy() != null ? application.getProcessedBy().getId() : null);
+        response.setProcessedAt(application.getProcessedAt());
+        return response;
+    }
+
+    @Transactional
+    public void rejectApplication(Long applicationId) {
+        log.info("Rejecting and deleting application with ID: {}", applicationId);
+
+        UniversityApplication application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new RuntimeException("Заявка не найдена"));
+
+        applicationRepository.delete(application);
+        log.info("Application with ID: {} has been deleted", applicationId);
+    }
+
+    @Transactional
+    public UniversityApplicationResponse approveApplication(Long applicationId) {
+        log.info("Approving application with ID: {}", applicationId);
+
+        UniversityApplication application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new RuntimeException("Заявка не найдена"));
+
+        // Получаем текущего админа
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        User admin = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Администратор не найден"));
+
+        // Находим статус "обработано"
+        ApplicationStatus processedStatus = statusRepository.findByName("обработано")
+                .orElseThrow(() -> new RuntimeException("Статус 'обработано' не найден"));
+
+        // Обновляем заявку
+        application.setStatus(processedStatus);
+        application.setProcessedBy(admin);
+        application.setProcessedAt(java.time.LocalDateTime.now());
+
+        UniversityApplication savedApplication = applicationRepository.save(application);
+        log.info("Application with ID: {} has been approved", applicationId);
+
+        return mapToResponse(savedApplication);
+    }
+
+    @Transactional
+    public void declineOwnApplication(Long applicationId) {
+        log.info("User declining their own application with ID: {}", applicationId);
+
+        // Получаем текущего пользователя
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+
+        UniversityApplication application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new RuntimeException("Заявка не найдена"));
+
+        // Проверяем, что пользователь отклоняет свою собственную заявку
+        if (!application.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Вы можете отклонить только свою собственную заявку");
+        }
+
+        applicationRepository.delete(application);
+        log.info("User application with ID: {} has been declined and deleted by user", applicationId);
     }
 }
 

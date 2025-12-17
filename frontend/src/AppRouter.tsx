@@ -8,6 +8,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import EditorDashboard from './pages/EditorDashboard';
 import EditorUniversityPage from './pages/EditorUniversityPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import AdminApplicationPage from './pages/AdminApplicationPage';
 import UniversityEditorsPage from './pages/UniversityEditorsPage';
 import { useAuth } from './hooks/useAuth';
 import UniversityPage from './pages/UniversityPage';
@@ -17,7 +18,7 @@ import SpecialtyPage from './pages/SpecialtyPage';
 import UserProfilePage from "./pages/UserProfilePage";
 import FacultyPage from './pages/FacultyPage';
 import ApplicationPage from './pages/ApplicationPage';
-import UniversityAdminDashboard from './pages/UniversityAdminDashboard';
+import UniversityAdminPage from './pages/UniversityAdminPage';
 import UniversityAdminUsersPage from './pages/UniversityAdminUsersPage';
 
 const ProtectedRoute: React.FC<{
@@ -93,6 +94,15 @@ const AppRouter = () => {
             />
 
             <Route
+                path="/admin/applications"
+                element={
+                    <ProtectedRoute roles={['ROLE_ADMIN']}>
+                        <AdminApplicationPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
                 path="/admin"
                 element={
                     <ProtectedRoute roles={['ROLE_ADMIN','ROLE_UNIVERSITY_ADMIN']}>
@@ -132,7 +142,7 @@ const AppRouter = () => {
                 path="/university-admin"
                 element={
                     <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
-                        <UniversityAdminDashboard />
+                        <UniversityAdminPage />
                     </ProtectedRoute>
                 }
             />

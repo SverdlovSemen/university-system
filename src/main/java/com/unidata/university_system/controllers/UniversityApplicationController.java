@@ -2,6 +2,7 @@ package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.UniversityApplicationRequest;
 import com.unidata.university_system.dto.UniversityApplicationResponse;
+import com.unidata.university_system.dto.UniversityApplicationWithUserResponse;
 import com.unidata.university_system.services.UniversityApplicationService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,53 @@ public class UniversityApplicationController {
     public ResponseEntity<Boolean> hasActiveApplication() {
         boolean hasActive = applicationService.hasActiveApplication();
         return ResponseEntity.ok(hasActive);
+    }
+
+    @GetMapping("/pending")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<UniversityApplicationWithUserResponse>> getPendingApplications() {
+        log.info("Getting all pending applications");
+        List<UniversityApplicationWithUserResponse> applications = applicationService.getPendingApplications();
+        return ResponseEntity.ok(applications);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> rejectApplication(@PathVariable Long id) {
+        log.info("Rejecting application with ID: {}", id);
+        try {
+            applicationService.rejectApplication(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            log.error("Error rejecting application with ID: {}", id, e);
+            throw new RuntimeException("Ошибка при отклонении заявки: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UniversityApplicationResponse> approveApplication(@PathVariable Long id) {
+        log.info("Approving application with ID: {}", id);
+        try {
+            UniversityApplicationResponse response = applicationService.approveApplication(id);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error approving application with ID: {}", id, e);
+            throw new RuntimeException("Ошибка при одобрении заявки: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}/decline")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> declineOwnApplication(@PathVariable Long id) {
+        log.info("User declining their own application with ID: {}", id);
+        try {
+            applicationService.declineOwnApplication(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            log.error("Error declining own application with ID: {}", id, e);
+            throw new RuntimeException("Ошибка при отклонении заявки: " + e.getMessage());
+        }
     }
 }
 

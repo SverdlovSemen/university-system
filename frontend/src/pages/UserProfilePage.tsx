@@ -6,7 +6,7 @@ import { UniversityResponse, ProgramResponse } from '../types';
 import { getUniversityById, fetchUniversities } from '../api/universityApi';
 import { getProgramById } from '../api/programApi';
 import UniversityCard from '../components/UniversityCard';
-import { hasActiveApplication } from '../api/universityApplicationApi';
+import { hasActiveApplication, getMyApplications, UniversityApplicationResponse, declineOwnApplication } from '../api/universityApplicationApi';
 
 const UserProfilePage = () => {
     const {
@@ -23,6 +23,24 @@ const UserProfilePage = () => {
     const [allUniversities, setAllUniversities] = useState<UniversityResponse[]>([]);
     const [loadingFavorites, setLoadingFavorites] = useState(false);
     const [applicationError, setApplicationError] = useState<string | null>(null);
+    const [approvedApplication, setApprovedApplication] = useState<UniversityApplicationResponse | null>(null);
+
+    // Загрузка одобренных заявок
+    useEffect(() => {
+        if (!user) return;
+
+        const loadApprovedApplications = async () => {
+            try {
+                const applications = await getMyApplications();
+                const approved = applications.find(app => app.statusName === 'обработано');
+                setApprovedApplication(approved || null);
+            } catch (error) {
+                console.error('Ошибка загрузки заявок:', error);
+            }
+        };
+
+        loadApprovedApplications();
+    }, [user]);
 
     // Загрузка избранных университетов
     useEffect(() => {
@@ -158,13 +176,37 @@ const UserProfilePage = () => {
         try {
             const hasActive = await hasActiveApplication();
             if (hasActive) {
-                setApplicationError('Ваша заявка находится на рассмотрении');
+                setApplicationError('У вас уже есть активная заявка');
             } else {
                 navigate('/application');
             }
         } catch (error) {
             console.error('Ошибка проверки заявки:', error);
             setApplicationError('Не удалось проверить статус заявки. Попробуйте еще раз.');
+        }
+    };
+
+    // Функция для принятия роли администратора университета
+    const handleBecomeUniversityAdmin = () => {
+        // TODO: Реализовать логику принятия роли администратора
+        console.log('Стать администратором университета');
+    };
+
+    // Функция для отклонения роли администратора университета
+    const handleDeclineUniversityAdmin = async () => {
+        if (!approvedApplication) return;
+
+        try {
+            // Удаляем заявку из базы данных
+            await declineOwnApplication(approvedApplication.id);
+
+            // Убираем карточку, очищая состояние
+            setApprovedApplication(null);
+
+            console.log('Заявка успешно удалена');
+        } catch (error) {
+            console.error('Ошибка при удалении заявки:', error);
+            alert('Не удалось удалить заявку. Попробуйте еще раз.');
         }
     };
 
@@ -218,6 +260,25 @@ const UserProfilePage = () => {
                             </Button>
                         </Col>
                     </Row>
+                    {approvedApplication && (
+                        <Alert variant="success" className="mt-3">
+                            <Alert.Heading>Ваша заявка университета одобрена</Alert.Heading>
+                            <div className="d-flex gap-2 mt-3">
+                                <Button
+                                    variant="primary"
+                                    onClick={handleBecomeUniversityAdmin}
+                                >
+                                    Стать администратором университета
+                                </Button>
+                                <Button
+                                    variant="outline-secondary"
+                                    onClick={handleDeclineUniversityAdmin}
+                                >
+                                    Отклонить
+                                </Button>
+                            </div>
+                        </Alert>
+                    )}
                     {applicationError && (
                         <Alert variant="warning" className="mt-3" onClose={() => setApplicationError(null)} dismissible>
                             {applicationError}

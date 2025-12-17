@@ -139,7 +139,7 @@ const AdminPage = () => {
                             </Card.Text>
                             <Button 
                                 variant="success" 
-                                onClick={() => navigate('/admin')}
+                                onClick={() => navigate('/admin/applications')}
                                 className="w-100"
                             >
                                 Перейти

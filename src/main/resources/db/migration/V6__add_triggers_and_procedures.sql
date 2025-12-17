@@ -113,9 +113,9 @@ IF v_role_id IS NULL THEN
 END IF;
 
     -- Проверяем допустимые роли
-    IF p_role_name NOT IN ('Администратор университета', 'Редактор университета') THEN
+    IF p_role_name NOT IN ('ROLE_UNIVERSITY_ADMIN', 'ROLE_EDITOR') THEN
         RAISE EXCEPTION
-            'Роль "%" не поддерживается для сотрудников университета. Допустимы: "Администратор университета", "Редактор университета"',
+            'Роль "%" не поддерживается для сотрудников университета. Допустимы: "ROLE_UNIVERSITY_ADMIN", "ROLE_EDITOR"',
             p_role_name;
 END IF;
 
@@ -217,9 +217,9 @@ IF v_role_name IS NULL THEN
 END IF;
 
         -- Проверяем роль
-        IF v_role_name <> 'Администратор сайта' THEN
+        IF v_role_name <> 'ROLE_ADMIN' THEN
             RAISE EXCEPTION
-                'Только пользователь с ролью "Администратор сайта" может обрабатывать заявки. У пользователя ID % роль: "%"',
+                'Только пользователь с ролью "ROLE_ADMIN" может обрабатывать заявки. У пользователя ID % роль: "%"',
                 NEW.processed_by,
                 v_role_name;
 END IF;
@@ -377,9 +377,9 @@ IF NOT v_university_exists THEN
 END IF;
 
     -- Проверяем допустимость роли
-    IF p_new_role_name NOT IN ('Администратор университета', 'Редактор университета') THEN
+    IF p_new_role_name NOT IN ('ROLE_UNIVERSITY_ADMIN', 'ROLE_EDITOR') THEN
         RAISE EXCEPTION
-            'Роль "%" не поддерживается. Допустимы только: "Администратор университета", "Редактор университета"',
+            'Роль "%" не поддерживается. Допустимы только: "ROLE_UNIVERSITY_ADMIN", "ROLE_EDITOR"',
             p_new_role_name;
 END IF;
 

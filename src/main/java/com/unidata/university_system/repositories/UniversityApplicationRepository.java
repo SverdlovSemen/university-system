@@ -9,5 +9,6 @@ import java.util.List;
 @Repository
 public interface UniversityApplicationRepository extends JpaRepository<UniversityApplication, Long> {
     List<UniversityApplication> findByUserId(Long userId);
+    List<UniversityApplication> findByStatusId(Long statusId);
 }
 
