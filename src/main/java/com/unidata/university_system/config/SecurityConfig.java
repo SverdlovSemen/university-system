@@ -67,7 +67,7 @@ public class SecurityConfig {
 
                         // ROLE_ADMIN endpoints
                         .requestMatchers(HttpMethod.POST, "/api/universities").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/universities/{id}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/universities/{id}").hasAnyRole("ADMIN","EDITOR","UNIVERSITY_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/universities/{id}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/universities/import").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/faculties").hasAnyRole("ADMIN","EDITOR","UNIVERSITY_ADMIN")

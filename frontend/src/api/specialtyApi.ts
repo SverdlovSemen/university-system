@@ -13,6 +13,11 @@ export const searchSpecialties = async (query?: string): Promise<SpecialtyRespon
     return response.data;
 };
 
+export const fetchAllSpecialties = async (): Promise<SpecialtyResponse[]> => {
+    const response = await axios.get(`${API_URL}`);
+    return response.data;
+};
+
 export const fetchSpecialtiesByUniversity = async (
     universityId: number,
     facultyId?: number

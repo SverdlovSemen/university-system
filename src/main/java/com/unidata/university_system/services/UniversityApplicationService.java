@@ -6,16 +6,22 @@ import com.unidata.university_system.dto.UniversityApplicationWithUserResponse;
 import com.unidata.university_system.models.ApplicationStatus;
 import com.unidata.university_system.models.UniversityApplication;
 import com.unidata.university_system.models.User;
+import com.unidata.university_system.models.University;
+import com.unidata.university_system.models.UniversityStatus;
 import com.unidata.university_system.repositories.ApplicationStatusRepository;
 import com.unidata.university_system.repositories.UniversityApplicationRepository;
 import com.unidata.university_system.repositories.UserRepository;
+import com.unidata.university_system.repositories.UniversityRepository;
+import com.unidata.university_system.repositories.UniversityStatusRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +37,15 @@ public class UniversityApplicationService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UniversityRepository universityRepository;
+
+    @Autowired
+    private UniversityStatusRepository universityStatusRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Transactional
     public UniversityApplicationResponse createApplication(UniversityApplicationRequest request) {
@@ -197,6 +212,70 @@ public class UniversityApplicationService {
 
         applicationRepository.delete(application);
         log.info("User application with ID: {} has been declined and deleted by user", applicationId);
+    }
+
+    @Transactional
+    public Long acceptUniversityAdminRole(Long applicationId) {
+        log.info("User accepting university admin role for application ID: {}", applicationId);
+
+        // Получаем текущего пользователя
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+
+        // Получаем заявку
+        UniversityApplication application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new RuntimeException("Заявка не найдена"));
+
+        // Проверяем, что пользователь принимает свою собственную заявку
+        if (!application.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Вы можете принять только свою собственную заявку");
+        }
+
+        // Проверяем статус заявки
+        if (!"обработано".equals(application.getStatus().getName())) {
+            throw new RuntimeException("Заявка не одобрена администратором");
+        }
+
+        // Находим или создаем статус университета "Активный"
+        UniversityStatus activeStatus = universityStatusRepository.findByName("Активный")
+                .orElseThrow(() -> new RuntimeException("Статус 'Активный' не найден"));
+
+        // Создаем университет на основе заявки
+        University university = new University();
+        university.setAbbreviation(application.getAbbreviation() != null ? application.getAbbreviation() : application.getFullName());
+        university.setFullName(application.getFullName());
+        university.setWebsite(application.getWebsite());
+        university.setStatus(activeStatus);
+        university.setType("Государственный"); // Значение по умолчанию
+        university.setCreatedAt(LocalDateTime.now());
+        university.setUpdatedAt(LocalDateTime.now());
+
+        // Сохраняем университет
+        University savedUniversity = universityRepository.save(university);
+        log.info("Created university with ID: {}", savedUniversity.getId());
+
+        // Вызываем процедуру для повышения пользователя до роли администратора университета
+        try {
+            jdbcTemplate.update(
+                "CALL promote_user_to_university_staff(?, ?, ?)",
+                user.getId().intValue(),
+                savedUniversity.getId().intValue(),
+                "ROLE_UNIVERSITY_ADMIN"
+            );
+            log.info("Successfully promoted user ID: {} to ROLE_UNIVERSITY_ADMIN for university ID: {}",
+                     user.getId(), savedUniversity.getId());
+        } catch (Exception e) {
+            log.error("Error calling promote_user_to_university_staff procedure", e);
+            throw new RuntimeException("Ошибка при назначении роли администратора университета: " + e.getMessage());
+        }
+
+        // Удаляем заявку после успешного принятия
+        applicationRepository.delete(application);
+        log.info("Deleted application with ID: {} after accepting", applicationId);
+
+        return savedUniversity.getId();
     }
 }
 

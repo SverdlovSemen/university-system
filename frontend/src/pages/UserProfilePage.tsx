@@ -6,7 +6,7 @@ import { UniversityResponse, ProgramResponse } from '../types';
 import { getUniversityById, fetchUniversities } from '../api/universityApi';
 import { getProgramById } from '../api/programApi';
 import UniversityCard from '../components/UniversityCard';
-import { hasActiveApplication, getMyApplications, UniversityApplicationResponse, declineOwnApplication } from '../api/universityApplicationApi';
+import { hasActiveApplication, getMyApplications, UniversityApplicationResponse, declineOwnApplication, acceptUniversityAdminRole } from '../api/universityApplicationApi';
 
 const UserProfilePage = () => {
     const {
@@ -187,9 +187,24 @@ const UserProfilePage = () => {
     };
 
     // Функция для принятия роли администратора университета
-    const handleBecomeUniversityAdmin = () => {
-        // TODO: Реализовать логику принятия роли администратора
-        console.log('Стать администратором университета');
+    const handleBecomeUniversityAdmin = async () => {
+        if (!approvedApplication) return;
+
+        try {
+            // Вызываем API для принятия роли администратора университета
+            const universityId = await acceptUniversityAdminRole(approvedApplication.id);
+
+            console.log('Пользователь стал администратором университета с ID:', universityId);
+
+            // Обновляем профиль пользователя
+            await refreshUserProfile();
+
+            // Перенаправляем пользователя на страницу администратора университета
+            navigate('/university-admin');
+        } catch (error) {
+            console.error('Ошибка при принятии роли администратора университета:', error);
+            alert('Не удалось принять роль администратора университета. Попробуйте еще раз.');
+        }
     };
 
     // Функция для отклонения роли администратора университета

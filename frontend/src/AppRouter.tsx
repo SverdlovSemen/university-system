@@ -4,10 +4,7 @@ import SearchPage from './pages/SearchPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
-import AdminDashboard from './pages/AdminDashboard';
-import EditorDashboard from './pages/EditorDashboard';
 import EditorUniversityPage from './pages/EditorUniversityPage';
-import AdminUsersPage from './pages/AdminUsersPage';
 import AdminApplicationPage from './pages/AdminApplicationPage';
 import UniversityEditorsPage from './pages/UniversityEditorsPage';
 import { useAuth } from './hooks/useAuth';
@@ -20,6 +17,8 @@ import FacultyPage from './pages/FacultyPage';
 import ApplicationPage from './pages/ApplicationPage';
 import UniversityAdminPage from './pages/UniversityAdminPage';
 import UniversityAdminUsersPage from './pages/UniversityAdminUsersPage';
+import FacultyEditPage from "./pages/FacultyEditPage";
+import ProgramEditPage from "./pages/ProgramEditPage";
 
 const ProtectedRoute: React.FC<{
     children: React.ReactNode,
@@ -103,33 +102,6 @@ const AppRouter = () => {
             />
 
             <Route
-                path="/admin"
-                element={
-                    <ProtectedRoute roles={['ROLE_ADMIN','ROLE_UNIVERSITY_ADMIN']}>
-                        <AdminDashboard />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/admin/users"
-                element={
-                    <ProtectedRoute roles={['ROLE_ADMIN','ROLE_UNIVERSITY_ADMIN']}>
-                        <AdminUsersPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/editor"
-                element={
-                    <ProtectedRoute roles={['ROLE_EDITOR','ROLE_UNIVERSITY_ADMIN']}>
-                        <EditorDashboard />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
                 path="/editor/university"
                 element={
                     <ProtectedRoute roles={['ROLE_EDITOR','ROLE_UNIVERSITY_ADMIN']}>
@@ -161,6 +133,46 @@ const AppRouter = () => {
                 element={
                     <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
                         <UniversityEditorsPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Создание нового факультета */}
+            <Route
+                path="/faculty/new"
+                element={
+                    <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
+                        <FacultyEditPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Редактирование существующего факультета */}
+            <Route
+                path="/faculty/edit/:facultyId"
+                element={
+                    <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
+                        <FacultyEditPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Создание новой программы */}
+            <Route
+                path="/program/new"
+                element={
+                    <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
+                        <ProgramEditPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Редактирование существующей программы */}
+            <Route
+                path="/program/edit/:programId"
+                element={
+                    <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
+                        <ProgramEditPage />
                     </ProtectedRoute>
                 }
             />

@@ -129,10 +129,12 @@ public class UniversityService {
             validateAccreditation(university.getAccreditationExpiryDate());
 
             // Обновляем город, если изменился cityId
-            if (request.cityId() != null && !request.cityId().equals(university.getCity().getId())) {
-                City city = cityRepository.findById(request.cityId())
-                        .orElseThrow(() -> new IllegalArgumentException("City not found: " + request.cityId()));
-                university.setCity(city);
+            if (request.cityId() != null) {
+                if (university.getCity() == null || !request.cityId().equals(university.getCity().getId())) {
+                    City city = cityRepository.findById(request.cityId())
+                            .orElseThrow(() -> new IllegalArgumentException("City not found: " + request.cityId()));
+                    university.setCity(city);
+                }
             }
 
             University savedUniversity = universityRepository.save(university);

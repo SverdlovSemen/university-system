@@ -24,6 +24,17 @@ export interface FacultyResponse {
     phone?: string;
 }
 
+export interface FacultyRequest {
+    fullName: string;
+    abbreviation?: string;
+    universityId: number;
+    deanName?: string;
+    deanContacts?: string;
+    address?: string;
+    email?: string;
+    phone?: string;
+}
+
 export interface UniversityResponse {
     id: number;
     fullName: string;
@@ -46,6 +57,11 @@ export interface SubjectResponse {
     name: string;
     examNumber?: number;
     minScore?: number;
+}
+
+export interface StudyFormResponse {
+    id: number;
+    name: string;
 }
 
 export interface SpecialtyResponse {
@@ -82,11 +98,22 @@ export interface ProgramResponse {
     specialty: SpecialtyShortResponse;
     programDescription?: string;
     studyForm?: string;
+    studyFormId?: number;
     duration?: string;
     mobilityOption: boolean; // строго boolean
     teachingLanguage?: string; // поле для языка обучения как на бэкенде
     admissionConditions: AdmissionConditionResponse[];
     subjects: SubjectResponse[];
+}
+
+export interface ProgramRequest {
+    facultyId: number;
+    specialtyId: number;
+    programDescription?: string;
+    studyFormId?: number;
+    duration?: string;
+    mobilityOption: boolean;
+    teachingLanguage?: string;
 }
 
 export interface DisciplineResponse {
@@ -114,6 +141,12 @@ export interface InfrastructureResponse {
     description?: string;
     address?: string;
     type?: InfrastructureTypeResponse;
+}
+
+export interface UniversityStatusResponse {
+    id: number;
+    name: string;
+    description?: string;
 }
 
 // Типы для запросов

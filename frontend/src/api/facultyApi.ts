@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { FacultyResponse, SpecialtyResponse, ProgramListItemResponse } from '../types';
+import { FacultyResponse, FacultyRequest, SpecialtyResponse, ProgramListItemResponse } from '../types';
 
 const API_URL = '/api/faculties';
 
@@ -26,23 +26,13 @@ export const getFacultiesByUniversity = async (universityId: number): Promise<Fa
     return response.data;
 };
 
-export const createFaculty = async (data: { fullName: string; abbreviation?: string; universityId: number }) => {
-    const payload = {
-        fullName: data.fullName,
-        abbreviation: data.abbreviation,
-        universityId: data.universityId
-    };
-    const response = await axios.post(`${API_URL}`, payload);
+export const createFaculty = async (data: FacultyRequest): Promise<FacultyResponse> => {
+    const response = await axios.post(`${API_URL}`, data);
     return response.data;
 };
 
-export const updateFaculty = async (id: number, data: { fullName: string; abbreviation?: string; universityId: number }) => {
-    const payload = {
-        fullName: data.fullName,
-        abbreviation: data.abbreviation,
-        universityId: data.universityId
-    };
-    const response = await axios.put(`${API_URL}/${id}`, payload);
+export const updateFaculty = async (id: number, data: FacultyRequest): Promise<FacultyResponse> => {
+    const response = await axios.put(`${API_URL}/${id}`, data);
     return response.data;
 };
 

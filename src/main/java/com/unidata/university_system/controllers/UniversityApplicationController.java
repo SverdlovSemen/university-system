@@ -96,5 +96,18 @@ public class UniversityApplicationController {
             throw new RuntimeException("Ошибка при отклонении заявки: " + e.getMessage());
         }
     }
+
+    @PostMapping("/{id}/accept")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Long> acceptUniversityAdminRole(@PathVariable Long id) {
+        log.info("User accepting university admin role for application with ID: {}", id);
+        try {
+            Long universityId = applicationService.acceptUniversityAdminRole(id);
+            return ResponseEntity.ok(universityId);
+        } catch (Exception e) {
+            log.error("Error accepting university admin role for application with ID: {}", id, e);
+            throw new RuntimeException("Ошибка при принятии роли администратора университета: " + e.getMessage());
+        }
+    }
 }
 

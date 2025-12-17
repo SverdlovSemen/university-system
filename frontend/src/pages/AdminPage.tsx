@@ -106,28 +106,7 @@ const AdminPage = () => {
 
             {/* Основные функции администратора */}
             <Row className="mb-4">
-                <Col md={4}>
-                    <Card className="h-100">
-                        <Card.Body>
-                            <Card.Title>
-                                <i className="bi bi-people-fill me-2"></i>
-                                Управление пользователями
-                            </Card.Title>
-                            <Card.Text>
-                                Управление учетными записями пользователей, назначение ролей, блокировка и разблокировка аккаунтов.
-                            </Card.Text>
-                            <Button 
-                                variant="primary" 
-                                onClick={() => navigate('/admin/users')}
-                                className="w-100"
-                            >
-                                Перейти
-                            </Button>
-                        </Card.Body>
-                    </Card>
-                </Col>
-
-                <Col md={4}>
+                <Col md={6}>
                     <Card className="h-100">
                         <Card.Body>
                             <Card.Title>
@@ -147,7 +126,6 @@ const AdminPage = () => {
                         </Card.Body>
                     </Card>
                 </Col>
-
 
             </Row>
 

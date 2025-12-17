@@ -4,23 +4,23 @@ import com.unidata.university_system.dto.AdmissionConditionResponse;
 import com.unidata.university_system.dto.DisciplineResponse;
 import com.unidata.university_system.dto.FacultyShortResponse;
 import com.unidata.university_system.dto.ProgramListItemResponse;
+import com.unidata.university_system.dto.ProgramRequest;
 import com.unidata.university_system.dto.ProgramResponse;
 import com.unidata.university_system.dto.SpecialtyShortResponse;
 import com.unidata.university_system.dto.SubjectResponse;
 import com.unidata.university_system.models.Program;
 import com.unidata.university_system.repositories.ProgramRepository;
 import com.unidata.university_system.services.ProgramService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 public class ProgramController {
@@ -109,6 +109,47 @@ public class ProgramController {
         return ResponseEntity.ok(disciplines);
     }
 
+    @PostMapping("/api/programs")
+    @PreAuthorize("hasAnyRole('ADMIN', 'UNIVERSITY_ADMIN', 'EDITOR')")
+    public ResponseEntity<ProgramResponse> createProgram(@Valid @RequestBody ProgramRequest request) {
+        try {
+            Program program = programService.createProgram(request);
+            ProgramResponse response = mapProgram(program);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PutMapping("/api/programs/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'UNIVERSITY_ADMIN', 'EDITOR')")
+    public ResponseEntity<ProgramResponse> updateProgram(@PathVariable Long id, @Valid @RequestBody ProgramRequest request) {
+        try {
+            Program program = programService.updateProgram(id, request);
+            ProgramResponse response = mapProgram(program);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @DeleteMapping("/api/programs/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'UNIVERSITY_ADMIN', 'EDITOR')")
+    public ResponseEntity<Void> deleteProgram(@PathVariable Long id) {
+        try {
+            programService.deleteProgram(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     private ProgramResponse mapProgram(Program p) {
         var admission = p.getAdmissionConditions().stream().map(ac -> {
             List<SubjectResponse> subjects = ac.getProgramSubjects().stream()
@@ -158,6 +199,7 @@ public class ProgramController {
                 ),
                 p.getProgramDescription(),
                 p.getStudyForm() != null ? p.getStudyForm().getName() : null,
+                p.getStudyForm() != null ? p.getStudyForm().getId() : null,
                 p.getDuration(),
                 Boolean.TRUE.equals(p.getMobilityOption()),
                 p.getTeachingLanguage(),

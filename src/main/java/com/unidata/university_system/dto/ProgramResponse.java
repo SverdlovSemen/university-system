@@ -8,6 +8,7 @@ public record ProgramResponse(
         SpecialtyShortResponse specialty,
         String programDescription,
         String studyForm,
+        Long studyFormId,
         String duration,
         boolean mobilityOption,
         String teachingLanguage,

@@ -78,3 +78,8 @@ export const approveApplication = async (id: number): Promise<UniversityApplicat
     return response.data;
 };
 
+export const acceptUniversityAdminRole = async (id: number): Promise<number> => {
+    const response = await axios.post<number>(`${API_BASE_URL}/${id}/accept`);
+    return response.data;
+};
+

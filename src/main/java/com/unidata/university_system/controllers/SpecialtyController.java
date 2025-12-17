@@ -128,4 +128,9 @@ public class SpecialtyController {
             return ResponseEntity.badRequest().body(null);
         }
     }
+
+    @GetMapping
+    public List<SpecialtyResponse> getAllSpecialties() {
+        return specialtyService.getAllSpecialties();
+    }
 }
