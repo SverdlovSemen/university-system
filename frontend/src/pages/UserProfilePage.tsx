@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Card, Row, Col, Spinner, Button } from 'react-bootstrap';
+import { Container, Card, Row, Col, Spinner, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { UniversityResponse, ProgramResponse } from '../types';
 import { getUniversityById, fetchUniversities } from '../api/universityApi';
 import { getProgramById } from '../api/programApi';
 import UniversityCard from '../components/UniversityCard';
+import { hasActiveApplication } from '../api/universityApplicationApi';
 
 const UserProfilePage = () => {
     const {
@@ -21,6 +22,7 @@ const UserProfilePage = () => {
     const [favoritePrograms, setFavoritePrograms] = useState<ProgramResponse[]>([]);
     const [allUniversities, setAllUniversities] = useState<UniversityResponse[]>([]);
     const [loadingFavorites, setLoadingFavorites] = useState(false);
+    const [applicationError, setApplicationError] = useState<string | null>(null);
 
     // Загрузка избранных университетов
     useEffect(() => {
@@ -150,6 +152,22 @@ const UserProfilePage = () => {
         }
     };
 
+    // Функция для обработки нажатия на кнопку подачи заявки
+    const handleApplicationClick = async () => {
+        setApplicationError(null); // Сбрасываем предыдущую ошибку
+        try {
+            const hasActive = await hasActiveApplication();
+            if (hasActive) {
+                setApplicationError('Ваша заявка находится на рассмотрении');
+            } else {
+                navigate('/application');
+            }
+        } catch (error) {
+            console.error('Ошибка проверки заявки:', error);
+            setApplicationError('Не удалось проверить статус заявки. Попробуйте еще раз.');
+        }
+    };
+
     if (authLoading) {
         return (
             <Container className="mt-4 text-center">
@@ -191,17 +209,20 @@ const UserProfilePage = () => {
                                 Это ваша личная страница, где вы можете просматривать избранные университеты и специальности.
                             </Card.Text>
                         </Col>
-                        <Col md={4} className="text-end">
-                            <div className="d-flex justify-content-end">
-                                <Button variant="outline-secondary" className="me-2" onClick={async () => { await refreshUserProfile(); alert('Профиль обновлён'); }}>
-                                    Обновить профиль
-                                </Button>
-                                <Button variant="outline-danger" onClick={logout}>
-                                    Выйти
-                                </Button>
-                            </div>
+                        <Col md={4} className="d-flex align-items-center justify-content-end">
+                            <Button
+                                variant="success"
+                                onClick={handleApplicationClick}
+                            >
+                                Подать заявку университета
+                            </Button>
                         </Col>
                     </Row>
+                    {applicationError && (
+                        <Alert variant="warning" className="mt-3" onClose={() => setApplicationError(null)} dismissible>
+                            {applicationError}
+                        </Alert>
+                    )}
                 </Card.Body>
             </Card>
 

@@ -15,6 +15,7 @@ import SpecialtySearchPage from './pages/SpecialtySearchPage';
 import SpecialtyPage from './pages/SpecialtyPage';
 import UserProfilePage from "./pages/UserProfilePage";
 import FacultyPage from './pages/FacultyPage';
+import ApplicationPage from './pages/ApplicationPage';
 import UniversityAdminDashboard from './pages/UniversityAdminDashboard';
 import UniversityAdminUsersPage from './pages/UniversityAdminUsersPage';
 
@@ -65,6 +66,16 @@ const AppRouter = () => {
                 element={
                     <ProtectedRoute>
                         <UserProfilePage />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Страница подачи заявки */}
+            <Route
+                path="/application"
+                element={
+                    <ProtectedRoute>
+                        <ApplicationPage />
                     </ProtectedRoute>
                 }
             />
