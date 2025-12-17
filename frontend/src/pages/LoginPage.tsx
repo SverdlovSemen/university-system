@@ -16,7 +16,33 @@ const LoginPage = () => {
 
         try {
             await login(email, password); // Передаем email вместо username
-            navigate('/');
+
+            // Перенаправляем в зависимости от роли
+            // Используем setTimeout чтобы дать время контексту обновиться
+            setTimeout(() => {
+                const storedToken = localStorage.getItem('token');
+                if (storedToken) {
+                    // Проверяем роли из локального хранилища или контекста
+                    fetch('/api/auth/profile', {
+                        headers: { Authorization: `Bearer ${storedToken}` }
+                    })
+                    .then(res => res.json())
+                    .then(profile => {
+                        if (profile.roles?.includes('ROLE_ADMIN')) {
+                            navigate('/admin-page');
+                        } else if (profile.roles?.includes('ROLE_UNIVERSITY_ADMIN')) {
+                            navigate('/university-admin');
+                        } else if (profile.roles?.includes('ROLE_EDITOR')) {
+                            navigate('/editor');
+                        } else {
+                            navigate('/');
+                        }
+                    })
+                    .catch(() => navigate('/'));
+                } else {
+                    navigate('/');
+                }
+            }, 100);
         } catch (err) {
             setError('Неверное имя пользователя или пароль');
         }

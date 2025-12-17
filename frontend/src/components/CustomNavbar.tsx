@@ -19,12 +19,21 @@ const CustomNavbar = () => {
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
                     <Nav className="me-auto">
-                        <Nav.Link as={Link} to="/">Поиск университетов</Nav.Link>
-                        <Nav.Link as={Link} to="/specialty-search">Поиск специальностей</Nav.Link> {/* Новая ссылка */}
-                        {isAuthenticated && (hasRole('ROLE_ADMIN') || hasRole('ROLE_UNIVERSITY_ADMIN')) && (
+                        {/* Поиск университетов и специальностей не показываем для ROLE_ADMIN */}
+                        {!hasRole('ROLE_ADMIN') && (
+                            <>
+                                <Nav.Link as={Link} to="/">Поиск университетов</Nav.Link>
+                                <Nav.Link as={Link} to="/specialty-search">Поиск специальностей</Nav.Link>
+                            </>
+                        )}
+                        {isAuthenticated && hasRole('ROLE_ADMIN') && (
+                            <Nav.Link as={Link} to="/admin-page">Панель ADMIN</Nav.Link>
+                        )}
+                        {/* Админ-панель только для ROLE_UNIVERSITY_ADMIN, но не для ROLE_ADMIN */}
+                        {isAuthenticated && hasRole('ROLE_UNIVERSITY_ADMIN') && !hasRole('ROLE_ADMIN') && (
                             <Nav.Link as={Link} to="/admin">Админ-панель</Nav.Link>
                         )}
-                        {isAuthenticated && (hasRole('ROLE_EDITOR') || hasRole('ROLE_UNIVERSITY_ADMIN')) && (
+                        {isAuthenticated && (hasRole('ROLE_EDITOR') || hasRole('ROLE_UNIVERSITY_ADMIN')) && !hasRole('ROLE_ADMIN') && (
                             <Nav.Link as={Link} to="/editor">Редактор</Nav.Link>
                         )}
                     </Nav>
@@ -35,13 +44,16 @@ const CustomNavbar = () => {
                                 <Navbar.Text className="me-3">
                                     Привет, {user?.firstName}!
                                 </Navbar.Text>
-                                <Button
-                                    variant="outline-secondary"
-                                    className="me-2"
-                                    onClick={() => navigate('/profile')} // Изменили
-                                >
-                                    Профиль
-                                </Button>
+                                {/* Кнопка "Профиль" не показывается для ROLE_ADMIN */}
+                                {!hasRole('ROLE_ADMIN') && (
+                                    <Button
+                                        variant="outline-secondary"
+                                        className="me-2"
+                                        onClick={() => navigate('/profile')}
+                                    >
+                                        Профиль
+                                    </Button>
+                                )}
                                 <Button
                                     variant="outline-danger"
                                     onClick={handleLogout}

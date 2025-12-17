@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import SearchPage from './pages/SearchPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import AdminPage from './pages/AdminPage';
 import AdminDashboard from './pages/AdminDashboard';
 import EditorDashboard from './pages/EditorDashboard';
 import EditorUniversityPage from './pages/EditorUniversityPage';
@@ -81,6 +82,16 @@ const AppRouter = () => {
             />
 
             {/* Защищенные маршруты */}
+            {/* Страница администратора сайта (только ROLE_ADMIN) */}
+            <Route
+                path="/admin-page"
+                element={
+                    <ProtectedRoute roles={['ROLE_ADMIN']}>
+                        <AdminPage />
+                    </ProtectedRoute>
+                }
+            />
+
             <Route
                 path="/admin"
                 element={

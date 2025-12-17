@@ -29,3 +29,16 @@ export const removeEditorFromUniversity = async (universityId: number, userId: n
     const response = await axios.delete(`/api/universities/${universityId}/editors/${userId}`);
     return response.data;
 };
+
+export interface AdminStats {
+    totalUsers: number;
+    totalUniversities: number;
+    totalPrograms: number;
+    pendingApplications: number;
+}
+
+export const getAdminStats = async (): Promise<AdminStats> => {
+    const response = await axios.get('/api/admin/stats');
+    return response.data;
+};
+
