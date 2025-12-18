@@ -605,34 +605,34 @@ const UniversityAdminPage = () => {
                 </Tab>
 
                 {/* Вкладка: Инфраструктура */}
-                <Tab eventKey="infrastructure" title="Инфраструктура">
-                    <Card>
-                        <Card.Header as="h5">Управление инфраструктурой</Card.Header>
-                        <Card.Body>
-                            <Card.Text>
-                                Здесь вы сможете управлять инфраструктурой университета (общежития, библиотеки, спортзалы и т.д.).
-                            </Card.Text>
-                            <p className="text-muted">
-                                Содержимое в разработке...
-                            </p>
-                        </Card.Body>
-                    </Card>
-                </Tab>
+                {/*<Tab eventKey="infrastructure" title="Инфраструктура">*/}
+                {/*    <Card>*/}
+                {/*        <Card.Header as="h5">Управление инфраструктурой</Card.Header>*/}
+                {/*        <Card.Body>*/}
+                {/*            <Card.Text>*/}
+                {/*                Здесь вы сможете управлять инфраструктурой университета (общежития, библиотеки, спортзалы и т.д.).*/}
+                {/*            </Card.Text>*/}
+                {/*            <p className="text-muted">*/}
+                {/*                Содержимое в разработке...*/}
+                {/*            </p>*/}
+                {/*        </Card.Body>*/}
+                {/*    </Card>*/}
+                {/*</Tab>*/}
 
                 {/* Вкладка: Работники университета */}
-                <Tab eventKey="employees" title="Работники университета">
-                    <Card>
-                        <Card.Header as="h5">Управление работниками</Card.Header>
-                        <Card.Body>
-                            <Card.Text>
-                                Здесь вы сможете управлять работниками университета (редакторы, администраторы).
-                            </Card.Text>
-                            <p className="text-muted">
-                                Содержимое в разработке...
-                            </p>
-                        </Card.Body>
-                    </Card>
-                </Tab>
+                {/*<Tab eventKey="employees" title="Работники университета">*/}
+                {/*    <Card>*/}
+                {/*        <Card.Header as="h5">Управление работниками</Card.Header>*/}
+                {/*        <Card.Body>*/}
+                {/*            <Card.Text>*/}
+                {/*                Здесь вы сможете управлять работниками университета (редакторы, администраторы).*/}
+                {/*            </Card.Text>*/}
+                {/*            <p className="text-muted">*/}
+                {/*                Содержимое в разработке...*/}
+                {/*            </p>*/}
+                {/*        </Card.Body>*/}
+                {/*    </Card>*/}
+                {/*</Tab>*/}
             </Tabs>
         </Container>
     );

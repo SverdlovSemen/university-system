@@ -31,9 +31,19 @@ const RegisterPage = () => {
             navigate('/login', { state: { message: 'Регистрация успешна! Теперь войдите.' } });
         } catch (err: any) {
             const resp = err?.response?.data;
-            let message = resp?.message || resp || err.message || 'Ошибка регистрации. Возможно, такой email уже существует.';
-            if (typeof message === 'object') message = JSON.stringify(message);
-            setError(message);
+
+            // Если пришел объект с message, используем его
+            if (resp && typeof resp === 'object' && resp.message) {
+                setError(resp.message);
+            }
+            // Если пришла строка
+            else if (typeof resp === 'string') {
+                setError(resp);
+            }
+            // Иначе показываем общую ошибку
+            else {
+                setError(err.message || 'Ошибка регистрации. Возможно, такой email уже существует.');
+            }
         }
     };
 
@@ -65,7 +75,12 @@ const RegisterPage = () => {
                                 onChange={(e) => setFirstName(e.target.value)}
                                 placeholder="Ваше имя"
                                 required
+                                minLength={2}
+                                maxLength={50}
                             />
+                            <Form.Text className="text-muted">
+                                От 2 до 50 символов
+                            </Form.Text>
                         </Form.Group>
 
                         <Form.Group className="mb-3">
@@ -75,7 +90,12 @@ const RegisterPage = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
+                                minLength={6}
+                                maxLength={100}
                             />
+                            <Form.Text className="text-muted">
+                                От 6 до 100 символов
+                            </Form.Text>
                         </Form.Group>
 
                         <Form.Group className="mb-3">

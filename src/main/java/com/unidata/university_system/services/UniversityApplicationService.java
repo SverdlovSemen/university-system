@@ -248,7 +248,7 @@ public class UniversityApplicationService {
         university.setFullName(application.getFullName());
         university.setWebsite(application.getWebsite());
         university.setStatus(activeStatus);
-        university.setType("Государственный"); // Значение по умолчанию
+        university.setType("-"); // Значение по умолчанию
         university.setCreatedAt(LocalDateTime.now());
         university.setUpdatedAt(LocalDateTime.now());
 
