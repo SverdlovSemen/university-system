@@ -7,7 +7,8 @@ import { getFacultiesByUniversity } from '../api/facultyApi';
 import { fetchAllSpecialties } from '../api/specialtyApi';
 import { getAllStudyForms } from '../api/studyFormApi';
 import { deleteAdmissionCondition, copyAdmissionCondition } from '../api/admissionConditionApi';
-import { ProgramRequest, FacultyResponse, SpecialtyResponse, StudyFormResponse } from '../types';
+import { createDiscipline, getDisciplinesByProgram, DisciplineRequest } from '../api/disciplineApi';
+import { ProgramRequest, FacultyResponse, SpecialtyResponse, StudyFormResponse, DisciplineResponse } from '../types';
 import AdmissionConditionCard from '../components/AdmissionConditionCard';
 
 const ProgramEditPage = () => {
@@ -29,6 +30,17 @@ const ProgramEditPage = () => {
     const [copyTargetYear, setCopyTargetYear] = useState<number | null>(null);
     const [copyError, setCopyError] = useState<string | null>(null);
     const [copyLoading, setCopyLoading] = useState(false);
+
+    // Состояния для дисциплин
+    const [disciplines, setDisciplines] = useState<DisciplineResponse[]>([]);
+    const [loadingDisciplines, setLoadingDisciplines] = useState(false);
+    const [showDisciplineModal, setShowDisciplineModal] = useState(false);
+    const [savingDiscipline, setSavingDiscipline] = useState(false);
+    const [disciplineFormData, setDisciplineFormData] = useState<DisciplineRequest>({
+        name: '',
+        semester: 1,
+        totalHours: 0
+    });
 
     // Данные для селектов
     const [faculties, setFaculties] = useState<FacultyResponse[]>([]);
@@ -145,6 +157,27 @@ const ProgramEditPage = () => {
             loadProgram();
         }
     }, [isEditMode, programId, user, loadingFaculties]);
+
+    // Загружаем дисциплины при редактировании программы
+    useEffect(() => {
+        const loadDisciplines = async () => {
+            if (isEditMode && programId) {
+                try {
+                    setLoadingDisciplines(true);
+                    const disciplinesData = await getDisciplinesByProgram(parseInt(programId));
+                    setDisciplines(disciplinesData);
+                } catch (err) {
+                    console.error('Ошибка загрузки дисциплин:', err);
+                } finally {
+                    setLoadingDisciplines(false);
+                }
+            }
+        };
+
+        if (user && activeTab === 'disciplines') {
+            loadDisciplines();
+        }
+    }, [isEditMode, programId, user, activeTab]);
 
     // Обработчик изменения полей формы
     const handleInputChange = (field: keyof ProgramRequest, value: string | number | boolean | undefined) => {
@@ -304,6 +337,63 @@ const ProgramEditPage = () => {
         }
     };
 
+    // Обработчики для дисциплин
+    const handleOpenDisciplineModal = () => {
+        setDisciplineFormData({
+            name: '',
+            semester: 1,
+            totalHours: 0
+        });
+        setShowDisciplineModal(true);
+    };
+
+    const handleCloseDisciplineModal = () => {
+        setShowDisciplineModal(false);
+        setDisciplineFormData({
+            name: '',
+            semester: 1,
+            totalHours: 0
+        });
+    };
+
+    const handleDisciplineInputChange = (field: keyof DisciplineRequest, value: string | number) => {
+        setDisciplineFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleAddDiscipline = async () => {
+        if (!programId) return;
+
+        if (!disciplineFormData.name.trim()) {
+            alert('Введите название дисциплины');
+            return;
+        }
+
+        if (disciplineFormData.semester < 1) {
+            alert('Семестр должен быть больше 0');
+            return;
+        }
+
+        if (disciplineFormData.totalHours < 1) {
+            alert('Количество часов должно быть больше 0');
+            return;
+        }
+
+        try {
+            setSavingDiscipline(true);
+            const newDiscipline = await createDiscipline(parseInt(programId), disciplineFormData);
+            setDisciplines(prev => [...prev, newDiscipline]);
+            handleCloseDisciplineModal();
+        } catch (err: any) {
+            console.error('Ошибка создания дисциплины:', err);
+            alert('Не удалось создать дисциплину: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setSavingDiscipline(false);
+        }
+    };
+
     if (loading || loadingFaculties) {
         return (
             <Container className="mt-4">
@@ -329,7 +419,7 @@ const ProgramEditPage = () => {
 
     return (
         <>
-        <Container className="mt-4">
+            <Container className="mt-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h2>{isEditMode ? 'Редактирование программы' : 'Добавление программы'}</h2>
                 <Button variant="secondary" onClick={handleCancel}>
@@ -570,66 +660,179 @@ const ProgramEditPage = () => {
                         )}
                     </Tab>
                 )}
+
+                {/* Вкладка: Дисциплины (только в режиме редактирования) */}
+                {isEditMode && (
+                    <Tab eventKey="disciplines" title="Дисциплины">
+                        <div className="mb-3">
+                            <Button
+                                variant="success"
+                                onClick={handleOpenDisciplineModal}
+                                className="d-flex align-items-center gap-2"
+                            >
+                                <i className="bi bi-plus-circle"></i>
+                                Добавить дисциплину
+                            </Button>
+                        </div>
+
+                        {loadingDisciplines ? (
+                            <div className="text-center py-5">
+                                <Spinner animation="border" role="status">
+                                    <span className="visually-hidden">Загрузка...</span>
+                                </Spinner>
+                            </div>
+                        ) : disciplines.length > 0 ? (
+                            <Card>
+                                <Card.Body>
+                                    <div className="table-responsive">
+                                        <table className="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Название дисциплины</th>
+                                                    <th>Семестр</th>
+                                                    <th>Количество часов</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {disciplines.map((discipline) => (
+                                                    <tr key={discipline.id}>
+                                                        <td>{discipline.name}</td>
+                                                        <td>{discipline.semester}</td>
+                                                        <td>{discipline.totalHours}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Card.Body>
+                            </Card>
+                        ) : (
+                            <Card>
+                                <Card.Body>
+                                    <p className="text-muted mb-0">
+                                        Дисциплины еще не добавлены. Нажмите кнопку выше, чтобы добавить их.
+                                    </p>
+                                </Card.Body>
+                            </Card>
+                        )}
+                    </Tab>
+                )}
             </Tabs>
-        </Container>
+            </Container>
 
-        <Modal show={showCopyModal} onHide={handleCloseCopyModal} centered>
-            <Modal.Header closeButton>
-                <Modal.Title>Быстрое создание условия</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <Form>
-                    <Form.Group className="mb-3">
-                        <Form.Label>Исходный год</Form.Label>
-                        <Form.Select
-                            value={copySourceId ?? ''}
-                            onChange={(e) => setCopySourceId(e.target.value ? parseInt(e.target.value) : null)}
-                        >
-                            <option value="">Выберите год для копирования</option>
-                            {programData?.admissionConditions?.map((c: any) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.year}
-                                </option>
-                            ))}
-                        </Form.Select>
-                    </Form.Group>
+            {/* Модальное окно для копирования условий поступления */}
+            <Modal show={showCopyModal} onHide={handleCloseCopyModal} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Быстрое создание условия</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Исходный год</Form.Label>
+                            <Form.Select
+                                value={copySourceId ?? ''}
+                                onChange={(e) => setCopySourceId(e.target.value ? parseInt(e.target.value) : null)}
+                            >
+                                <option value="">Выберите год для копирования</option>
+                                {programData?.admissionConditions?.map((c: any) => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.year}
+                                    </option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Новый год</Form.Label>
-                        <Form.Control
-                            type="number"
-                            placeholder="Например: 2025"
-                            value={copyTargetYear ?? ''}
-                            onChange={(e) => setCopyTargetYear(e.target.value ? parseInt(e.target.value) : null)}
-                        />
-                        <Form.Text className="text-muted">
-                            Год, для которого ещё нет условий поступления.
-                        </Form.Text>
-                    </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Новый год</Form.Label>
+                            <Form.Control
+                                type="number"
+                                placeholder="Например: 2025"
+                                value={copyTargetYear ?? ''}
+                                onChange={(e) => setCopyTargetYear(e.target.value ? parseInt(e.target.value) : null)}
+                            />
+                            <Form.Text className="text-muted">
+                                Год, для которого ещё нет условий поступления.
+                            </Form.Text>
+                        </Form.Group>
 
-                    {copyError && (
-                        <Alert variant="danger" className="mb-0">
-                            {copyError}
-                        </Alert>
-                    )}
-                </Form>
-            </Modal.Body>
-            <Modal.Footer>
-                <Button variant="secondary" onClick={handleCloseCopyModal} disabled={copyLoading}>
-                    Отмена
-                </Button>
-                <Button variant="primary" onClick={handleCopyCondition} disabled={copyLoading}>
-                    {copyLoading ? (
-                        <>
-                            <Spinner animation="border" size="sm" className="me-2" />
-                            Копирование...
-                        </>
-                    ) : (
-                        'Скопировать'
-                    )}
-                </Button>
-            </Modal.Footer>
-        </Modal>
+                        {copyError && (
+                            <Alert variant="danger" className="mb-0">
+                                {copyError}
+                            </Alert>
+                        )}
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleCloseCopyModal} disabled={copyLoading}>
+                        Отмена
+                    </Button>
+                    <Button variant="primary" onClick={handleCopyCondition} disabled={copyLoading}>
+                        {copyLoading ? (
+                            <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Копирование...
+                            </>
+                        ) : (
+                            'Скопировать'
+                        )}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Модальное окно для добавления дисциплины */}
+            <Modal show={showDisciplineModal} onHide={handleCloseDisciplineModal} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Добавление дисциплины</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Название дисциплины *</Form.Label>
+                            <Form.Control
+                                type="text"
+                                placeholder="Например: Математический анализ"
+                                value={disciplineFormData.name}
+                                onChange={(e) => handleDisciplineInputChange('name', e.target.value)}
+                            />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Семестр *</Form.Label>
+                            <Form.Control
+                                type="number"
+                                min="1"
+                                value={disciplineFormData.semester}
+                                onChange={(e) => handleDisciplineInputChange('semester', parseInt(e.target.value) || 1)}
+                            />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Количество часов *</Form.Label>
+                            <Form.Control
+                                type="number"
+                                min="1"
+                                value={disciplineFormData.totalHours}
+                                onChange={(e) => handleDisciplineInputChange('totalHours', parseInt(e.target.value) || 0)}
+                            />
+                        </Form.Group>
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleCloseDisciplineModal} disabled={savingDiscipline}>
+                        Отмена
+                    </Button>
+                    <Button variant="primary" onClick={handleAddDiscipline} disabled={savingDiscipline}>
+                        {savingDiscipline ? (
+                            <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Добавление...
+                            </>
+                        ) : (
+                            'Добавить'
+                        )}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </>
     );
 };

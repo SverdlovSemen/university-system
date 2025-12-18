@@ -1,5 +1,6 @@
 package com.unidata.university_system.services;
 
+import com.unidata.university_system.dto.DisciplineRequest;
 import com.unidata.university_system.dto.DisciplineResponse;
 import com.unidata.university_system.dto.ProgramRequest;
 import com.unidata.university_system.models.Discipline;
@@ -57,6 +58,22 @@ public class ProgramService {
         return disciplines.stream()
                 .map(d -> new DisciplineResponse(d.getId(), d.getName(), d.getSemester(), d.getTotalHours()))
                 .toList();
+    }
+
+    @Transactional
+    public Discipline createDiscipline(Long programId, DisciplineRequest request) {
+        Program program = programRepository.findById(programId)
+                .orElseThrow(() -> new IllegalArgumentException("Программа не найдена"));
+
+        checkCanModifyUniversity(program.getFaculty().getUniversity().getId());
+
+        Discipline discipline = new Discipline();
+        discipline.setProgram(program);
+        discipline.setName(request.name());
+        discipline.setSemester(request.semester());
+        discipline.setTotalHours(request.totalHours());
+
+        return disciplineRepository.save(discipline);
     }
 
     @Transactional

@@ -1,6 +1,7 @@
 package com.unidata.university_system.controllers;
 
 import com.unidata.university_system.dto.AdmissionConditionResponse;
+import com.unidata.university_system.dto.DisciplineRequest;
 import com.unidata.university_system.dto.DisciplineResponse;
 import com.unidata.university_system.dto.FacultyShortResponse;
 import com.unidata.university_system.dto.ProgramListItemResponse;
@@ -107,6 +108,28 @@ public class ProgramController {
         }
         List<DisciplineResponse> disciplines = programService.getDisciplinesForProgram(programId);
         return ResponseEntity.ok(disciplines);
+    }
+
+    @PostMapping("/api/programs/{programId}/disciplines")
+    @PreAuthorize("hasAnyRole('ADMIN', 'UNIVERSITY_ADMIN', 'EDITOR')")
+    public ResponseEntity<?> createDiscipline(
+            @PathVariable Long programId,
+            @Valid @RequestBody DisciplineRequest request
+    ) {
+        try {
+            com.unidata.university_system.models.Discipline discipline = programService.createDiscipline(programId, request);
+            DisciplineResponse response = new DisciplineResponse(
+                    discipline.getId(),
+                    discipline.getName(),
+                    discipline.getSemester(),
+                    discipline.getTotalHours()
+            );
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ошибка при создании дисциплины");
+        }
     }
 
     @PostMapping("/api/programs")
