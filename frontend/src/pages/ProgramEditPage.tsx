@@ -7,7 +7,7 @@ import { getFacultiesByUniversity } from '../api/facultyApi';
 import { fetchAllSpecialties } from '../api/specialtyApi';
 import { getAllStudyForms } from '../api/studyFormApi';
 import { deleteAdmissionCondition, copyAdmissionCondition } from '../api/admissionConditionApi';
-import { createDiscipline, getDisciplinesByProgram, DisciplineRequest } from '../api/disciplineApi';
+import { createDiscipline, DisciplineRequest } from '../api/disciplineApi';
 import { ProgramRequest, FacultyResponse, SpecialtyResponse, StudyFormResponse, DisciplineResponse } from '../types';
 import AdmissionConditionCard from '../components/AdmissionConditionCard';
 
@@ -33,7 +33,6 @@ const ProgramEditPage = () => {
 
     // Состояния для дисциплин
     const [disciplines, setDisciplines] = useState<DisciplineResponse[]>([]);
-    const [loadingDisciplines, setLoadingDisciplines] = useState(false);
     const [showDisciplineModal, setShowDisciplineModal] = useState(false);
     const [savingDiscipline, setSavingDiscipline] = useState(false);
     const [disciplineFormData, setDisciplineFormData] = useState<DisciplineRequest>({
@@ -158,26 +157,12 @@ const ProgramEditPage = () => {
         }
     }, [isEditMode, programId, user, loadingFaculties]);
 
-    // Загружаем дисциплины при редактировании программы
+    // Загружаем дисциплины из данных программы при переключении на вкладку
     useEffect(() => {
-        const loadDisciplines = async () => {
-            if (isEditMode && programId) {
-                try {
-                    setLoadingDisciplines(true);
-                    const disciplinesData = await getDisciplinesByProgram(parseInt(programId));
-                    setDisciplines(disciplinesData);
-                } catch (err) {
-                    console.error('Ошибка загрузки дисциплин:', err);
-                } finally {
-                    setLoadingDisciplines(false);
-                }
-            }
-        };
-
-        if (user && activeTab === 'disciplines') {
-            loadDisciplines();
+        if (isEditMode && programData && activeTab === 'disciplines') {
+            setDisciplines(programData.disciplines || []);
         }
-    }, [isEditMode, programId, user, activeTab]);
+    }, [isEditMode, programData, activeTab]);
 
     // Обработчик изменения полей формы
     const handleInputChange = (field: keyof ProgramRequest, value: string | number | boolean | undefined) => {
@@ -384,7 +369,16 @@ const ProgramEditPage = () => {
         try {
             setSavingDiscipline(true);
             const newDiscipline = await createDiscipline(parseInt(programId), disciplineFormData);
+
+            // Обновляем список дисциплин в состоянии
             setDisciplines(prev => [...prev, newDiscipline]);
+
+            // Также обновляем данные программы
+            setProgramData((prev: any) => ({
+                ...prev,
+                disciplines: [...(prev.disciplines || []), newDiscipline]
+            }));
+
             handleCloseDisciplineModal();
         } catch (err: any) {
             console.error('Ошибка создания дисциплины:', err);
@@ -675,13 +669,7 @@ const ProgramEditPage = () => {
                             </Button>
                         </div>
 
-                        {loadingDisciplines ? (
-                            <div className="text-center py-5">
-                                <Spinner animation="border" role="status">
-                                    <span className="visually-hidden">Загрузка...</span>
-                                </Spinner>
-                            </div>
-                        ) : disciplines.length > 0 ? (
+                        {disciplines.length > 0 ? (
                             <Card>
                                 <Card.Body>
                                     <div className="table-responsive">

@@ -118,6 +118,7 @@ export interface ProgramResponse {
     teachingLanguage?: string; // поле для языка обучения как на бэкенде
     admissionConditions: AdmissionConditionResponse[];
     subjects: SubjectResponse[];
+    disciplines: DisciplineResponse[];
 }
 
 export interface ProgramRequest {

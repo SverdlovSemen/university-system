@@ -228,7 +228,15 @@ public class ProgramController {
                 Boolean.TRUE.equals(p.getMobilityOption()),
                 p.getTeachingLanguage(),
                 admission,
-                progSubjects
+                progSubjects,
+                p.getDisciplines().stream()
+                        .map(d -> new DisciplineResponse(
+                                d.getId(),
+                                d.getName(),
+                                d.getSemester(),
+                                d.getTotalHours()
+                        ))
+                        .toList()
         );
     }
 }

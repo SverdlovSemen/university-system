@@ -13,6 +13,7 @@ public record ProgramResponse(
         boolean mobilityOption,
         String teachingLanguage,
         List<AdmissionConditionResponse> admissionConditions,
-        List<SubjectResponse> subjects
+        List<SubjectResponse> subjects,
+        List<DisciplineResponse> disciplines
 ) {
 }
