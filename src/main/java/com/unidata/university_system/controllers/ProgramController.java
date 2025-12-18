@@ -162,6 +162,7 @@ public class ProgramController {
                     .sorted(Comparator.comparing(subject -> subject.examNumber() == null ? Integer.MAX_VALUE : subject.examNumber()))
                     .toList();
             return new AdmissionConditionResponse(
+                    ac.getId(),
                     ac.getYear(),
                     ac.getPassingScore(),
                     ac.getBudgetPlaces(),

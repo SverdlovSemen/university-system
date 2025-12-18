@@ -1,17 +1,18 @@
 package com.unidata.university_system.dto;
 
-import java.math.BigDecimal;
-import java.util.List;
+import jakarta.validation.constraints.NotNull;
 
-public record AdmissionConditionResponse(
-        Long id,
+import java.math.BigDecimal;
+
+public record AdmissionConditionRequest(
+        @NotNull(message = "Год обязателен")
         Integer year,
         BigDecimal passingScore,
         Integer budgetPlaces,
         Integer targetedPlaces,
         Integer paidPlaces,
-        List<SubjectResponse> subjects,
         BigDecimal admissionFee,
         Boolean hasDvi
 ) {
 }
+

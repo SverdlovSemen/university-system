@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Container, Card, Form, Row, Col, Button, Alert, Spinner, Tab, Tabs } from 'react-bootstrap';
+import { Container, Card, Form, Row, Col, Button, Alert, Spinner, Tab, Tabs, Modal } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { createProgram, updateProgram, getProgramById } from '../api/programApi';
 import { getFacultiesByUniversity } from '../api/facultyApi';
 import { fetchAllSpecialties } from '../api/specialtyApi';
 import { getAllStudyForms } from '../api/studyFormApi';
+import { deleteAdmissionCondition, copyAdmissionCondition } from '../api/admissionConditionApi';
 import { ProgramRequest, FacultyResponse, SpecialtyResponse, StudyFormResponse } from '../types';
+import AdmissionConditionCard from '../components/AdmissionConditionCard';
 
 const ProgramEditPage = () => {
     const navigate = useNavigate();
@@ -20,6 +22,13 @@ const ProgramEditPage = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [programData, setProgramData] = useState<any>(null);
+    const [deletingConditionId, setDeletingConditionId] = useState<number | null>(null);
+    const [showCopyModal, setShowCopyModal] = useState(false);
+    const [copySourceId, setCopySourceId] = useState<number | null>(null);
+    const [copyTargetYear, setCopyTargetYear] = useState<number | null>(null);
+    const [copyError, setCopyError] = useState<string | null>(null);
+    const [copyLoading, setCopyLoading] = useState(false);
 
     // Данные для селектов
     const [faculties, setFaculties] = useState<FacultyResponse[]>([]);
@@ -112,6 +121,7 @@ const ProgramEditPage = () => {
                     setError(null);
 
                     const program = await getProgramById(parseInt(programId));
+                    setProgramData(program);
 
                     setFormData({
                         facultyId: program.faculty.id,
@@ -222,6 +232,78 @@ const ProgramEditPage = () => {
         navigate('/university-admin');
     };
 
+    const handleEditCondition = (conditionId: number) => {
+        navigate(`/program/edit/${programId}/admission-condition/${conditionId}`);
+    };
+
+    const handleAddCondition = () => {
+        navigate(`/program/edit/${programId}/admission-condition/new`);
+    };
+
+    const handleDeleteCondition = async (conditionId: number) => {
+        if (!programId) return;
+
+        if (window.confirm('Вы уверены, что хотите удалить это условие поступления?')) {
+            try {
+                setDeletingConditionId(conditionId);
+                await deleteAdmissionCondition(parseInt(programId), conditionId);
+
+                // Перезагружаем данные программы
+                const program = await getProgramById(parseInt(programId));
+                setProgramData(program);
+            } catch (err) {
+                console.error('Ошибка удаления условия поступления:', err);
+                alert('Не удалось удалить условие поступления');
+            } finally {
+                setDeletingConditionId(null);
+            }
+        }
+    };
+
+    const handleOpenCopyModal = () => {
+        setCopyError(null);
+        setCopyTargetYear(null);
+        setCopySourceId(null);
+        setShowCopyModal(true);
+    };
+
+    const handleCloseCopyModal = () => {
+        setShowCopyModal(false);
+        setCopyError(null);
+    };
+
+    const handleCopyCondition = async () => {
+        if (!programId || copySourceId === null || copyTargetYear === null) {
+            setCopyError('Выберите исходное условие и укажите целевой год');
+            return;
+        }
+
+        // Проверяем, что выбранный целевой год ещё не используется
+        const targetExists = programData?.admissionConditions?.some((c: any) => c.year === copyTargetYear);
+        if (targetExists) {
+            setCopyError('Для выбранного года уже есть условие поступления');
+            return;
+        }
+
+        try {
+            setCopyLoading(true);
+            setCopyError(null);
+            const updatedConditions = await copyAdmissionCondition(parseInt(programId), copySourceId, copyTargetYear);
+            // Обновляем данные программы
+            setProgramData((prev: any) => ({
+                ...prev,
+                admissionConditions: updatedConditions
+            }));
+            handleCloseCopyModal();
+        } catch (err: any) {
+            console.error('Ошибка копирования условия поступления:', err);
+            const message = err.response?.data || err.message || 'Не удалось скопировать условие поступления';
+            setCopyError(message);
+        } finally {
+            setCopyLoading(false);
+        }
+    };
+
     if (loading || loadingFaculties) {
         return (
             <Container className="mt-4">
@@ -246,6 +328,7 @@ const ProgramEditPage = () => {
     }
 
     return (
+        <>
         <Container className="mt-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h2>{isEditMode ? 'Редактирование программы' : 'Добавление программы'}</h2>
@@ -437,8 +520,117 @@ const ProgramEditPage = () => {
                         </Card.Body>
                     </Card>
                 </Tab>
+
+                {/* Вкладка: Условия поступления (только в режиме редактирования) */}
+                {isEditMode && (
+                    <Tab eventKey="admission" title="Условия поступления">
+                        <div className="mb-3 d-flex gap-2 flex-wrap">
+                            <Button
+                                variant="success"
+                                onClick={handleAddCondition}
+                                className="d-flex align-items-center gap-2"
+                            >
+                                <i className="bi bi-plus-circle"></i>
+                                Добавить условия поступления
+                            </Button>
+                            <Button
+                                variant="outline-primary"
+                                onClick={handleOpenCopyModal}
+                                className="d-flex align-items-center gap-2"
+                            >
+                                <i className="bi bi-lightning-charge"></i>
+                                Быстрое создание условия
+                            </Button>
+                        </div>
+
+                        {programData?.admissionConditions && programData.admissionConditions.length > 0 ? (
+                            <div>
+                                {programData.admissionConditions.map((condition: any) => (
+                                    <div key={condition.id} className="position-relative">
+                                        <AdmissionConditionCard
+                                            condition={condition}
+                                            onEdit={handleEditCondition}
+                                        />
+                                        {deletingConditionId === condition.id && (
+                                            <div className="position-absolute top-50 start-50 translate-middle">
+                                                <Spinner animation="border" variant="primary" />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <Card>
+                                <Card.Body>
+                                    <p className="text-muted mb-0">
+                                        Условия поступления еще не добавлены. Нажмите кнопку выше, чтобы добавить их.
+                                    </p>
+                                </Card.Body>
+                            </Card>
+                        )}
+                    </Tab>
+                )}
             </Tabs>
         </Container>
+
+        <Modal show={showCopyModal} onHide={handleCloseCopyModal} centered>
+            <Modal.Header closeButton>
+                <Modal.Title>Быстрое создание условия</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <Form>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Исходный год</Form.Label>
+                        <Form.Select
+                            value={copySourceId ?? ''}
+                            onChange={(e) => setCopySourceId(e.target.value ? parseInt(e.target.value) : null)}
+                        >
+                            <option value="">Выберите год для копирования</option>
+                            {programData?.admissionConditions?.map((c: any) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.year}
+                                </option>
+                            ))}
+                        </Form.Select>
+                    </Form.Group>
+
+                    <Form.Group className="mb-3">
+                        <Form.Label>Новый год</Form.Label>
+                        <Form.Control
+                            type="number"
+                            placeholder="Например: 2025"
+                            value={copyTargetYear ?? ''}
+                            onChange={(e) => setCopyTargetYear(e.target.value ? parseInt(e.target.value) : null)}
+                        />
+                        <Form.Text className="text-muted">
+                            Год, для которого ещё нет условий поступления.
+                        </Form.Text>
+                    </Form.Group>
+
+                    {copyError && (
+                        <Alert variant="danger" className="mb-0">
+                            {copyError}
+                        </Alert>
+                    )}
+                </Form>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="secondary" onClick={handleCloseCopyModal} disabled={copyLoading}>
+                    Отмена
+                </Button>
+                <Button variant="primary" onClick={handleCopyCondition} disabled={copyLoading}>
+                    {copyLoading ? (
+                        <>
+                            <Spinner animation="border" size="sm" className="me-2" />
+                            Копирование...
+                        </>
+                    ) : (
+                        'Скопировать'
+                    )}
+                </Button>
+            </Modal.Footer>
+        </Modal>
+        </>
     );
 };
 

@@ -59,6 +59,19 @@ export interface SubjectResponse {
     minScore?: number;
 }
 
+export interface SpecializationSubjectResponse {
+    subjectId: number;
+    subjectName: string;
+    isRequired: boolean;
+    minScoreForYear: number;
+}
+
+export interface ProgramSubjectRequest {
+    subjectId: number;
+    examNumber: number;
+    minScore?: number;
+}
+
 export interface StudyFormResponse {
     id: number;
     name: string;
@@ -81,6 +94,7 @@ export interface SubjectCombinationResponse {
 }
 
 export interface AdmissionConditionResponse {
+    id: number;
     year: number;
     passingScore: number;
     budgetPlaces: number;

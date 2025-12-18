@@ -19,6 +19,7 @@ import UniversityAdminPage from './pages/UniversityAdminPage';
 import UniversityAdminUsersPage from './pages/UniversityAdminUsersPage';
 import FacultyEditPage from "./pages/FacultyEditPage";
 import ProgramEditPage from "./pages/ProgramEditPage";
+import AdmissionConditionEditPage from "./pages/AdmissionConditionEditPage";
 
 const ProtectedRoute: React.FC<{
     children: React.ReactNode,
@@ -173,6 +174,26 @@ const AppRouter = () => {
                 element={
                     <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
                         <ProgramEditPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Создание нового условия поступления */}
+            <Route
+                path="/program/edit/:programId/admission-condition/new"
+                element={
+                    <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
+                        <AdmissionConditionEditPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Редактирование существующего условия поступления */}
+            <Route
+                path="/program/edit/:programId/admission-condition/:conditionId"
+                element={
+                    <ProtectedRoute roles={['ROLE_UNIVERSITY_ADMIN']}>
+                        <AdmissionConditionEditPage />
                     </ProtectedRoute>
                 }
             />
