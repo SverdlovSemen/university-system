@@ -7,7 +7,7 @@ import { getFacultiesByUniversity } from '../api/facultyApi';
 import { fetchAllSpecialties } from '../api/specialtyApi';
 import { getAllStudyForms } from '../api/studyFormApi';
 import { deleteAdmissionCondition, copyAdmissionCondition } from '../api/admissionConditionApi';
-import { createDiscipline, DisciplineRequest } from '../api/disciplineApi';
+import { createDiscipline, updateDiscipline, deleteDiscipline, DisciplineRequest } from '../api/disciplineApi';
 import { ProgramRequest, FacultyResponse, SpecialtyResponse, StudyFormResponse, DisciplineResponse } from '../types';
 import AdmissionConditionCard from '../components/AdmissionConditionCard';
 
@@ -40,6 +40,8 @@ const ProgramEditPage = () => {
         semester: 1,
         totalHours: 0
     });
+    const [selectedDiscipline, setSelectedDiscipline] = useState<DisciplineResponse | null>(null);
+    const [disciplineError, setDisciplineError] = useState<string | null>(null);
 
     // Данные для селектов
     const [faculties, setFaculties] = useState<FacultyResponse[]>([]);
@@ -324,6 +326,9 @@ const ProgramEditPage = () => {
 
     // Обработчики для дисциплин
     const handleOpenDisciplineModal = () => {
+        // режим создания
+        setSelectedDiscipline(null);
+        setDisciplineError(null);
         setDisciplineFormData({
             name: '',
             semester: 1,
@@ -332,8 +337,21 @@ const ProgramEditPage = () => {
         setShowDisciplineModal(true);
     };
 
+    const handleOpenEditDisciplineModal = (discipline: DisciplineResponse) => {
+        setSelectedDiscipline(discipline);
+        setDisciplineError(null);
+        setDisciplineFormData({
+            name: discipline.name,
+            semester: discipline.semester,
+            totalHours: discipline.totalHours
+        });
+        setShowDisciplineModal(true);
+    };
+
     const handleCloseDisciplineModal = () => {
         setShowDisciplineModal(false);
+        setSelectedDiscipline(null);
+        setDisciplineError(null);
         setDisciplineFormData({
             name: '',
             semester: 1,
@@ -342,47 +360,92 @@ const ProgramEditPage = () => {
     };
 
     const handleDisciplineInputChange = (field: keyof DisciplineRequest, value: string | number) => {
+        setDisciplineError(null);
         setDisciplineFormData(prev => ({
             ...prev,
             [field]: value
         }));
     };
 
-    const handleAddDiscipline = async () => {
+    const validateDisciplineForm = (): string | null => {
+        if (!disciplineFormData.name.trim()) {
+            return 'Введите название дисциплины';
+        }
+        if (disciplineFormData.semester < 1) {
+            return 'Семестр должен быть больше 0';
+        }
+        if (disciplineFormData.totalHours < 1) {
+            return 'Количество часов должно быть больше 0';
+        }
+        return null;
+    };
+
+    const handleSaveDiscipline = async () => {
         if (!programId) return;
 
-        if (!disciplineFormData.name.trim()) {
-            alert('Введите название дисциплины');
-            return;
-        }
-
-        if (disciplineFormData.semester < 1) {
-            alert('Семестр должен быть больше 0');
-            return;
-        }
-
-        if (disciplineFormData.totalHours < 1) {
-            alert('Количество часов должно быть больше 0');
+        const validationError = validateDisciplineForm();
+        if (validationError) {
+            setDisciplineError(validationError);
             return;
         }
 
         try {
             setSavingDiscipline(true);
-            const newDiscipline = await createDiscipline(parseInt(programId), disciplineFormData);
 
-            // Обновляем список дисциплин в состоянии
-            setDisciplines(prev => [...prev, newDiscipline]);
+            if (selectedDiscipline) {
+                // режим редактирования
+                const updated = await updateDiscipline(parseInt(programId), selectedDiscipline.id, disciplineFormData);
 
-            // Также обновляем данные программы
+                // Обновляем список дисциплин
+                setDisciplines(prev => prev.map(d => (d.id === updated.id ? updated : d)));
+
+                // Обновляем данные программы
+                setProgramData((prev: any) => ({
+                    ...prev,
+                    disciplines: (prev.disciplines || []).map((d: DisciplineResponse) => (d.id === updated.id ? updated : d))
+                }));
+            } else {
+                // режим создания
+                const newDiscipline = await createDiscipline(parseInt(programId), disciplineFormData);
+
+                setDisciplines(prev => [...prev, newDiscipline]);
+                setProgramData((prev: any) => ({
+                    ...prev,
+                    disciplines: [...(prev.disciplines || []), newDiscipline]
+                }));
+            }
+
+            handleCloseDisciplineModal();
+        } catch (err: any) {
+            console.error('Ошибка сохранения дисциплины:', err);
+            setDisciplineError(err.response?.data?.message || err.message || 'Не удалось сохранить дисциплину');
+        } finally {
+            setSavingDiscipline(false);
+        }
+    };
+
+    const handleDeleteDiscipline = async () => {
+        if (!programId || !selectedDiscipline) return;
+
+        if (!window.confirm('Вы уверены, что хотите удалить эту дисциплину?')) {
+            return;
+        }
+
+        try {
+            setSavingDiscipline(true);
+            await deleteDiscipline(parseInt(programId), selectedDiscipline.id);
+
+            // Удаляем из локального списка
+            setDisciplines(prev => prev.filter(d => d.id !== selectedDiscipline.id));
             setProgramData((prev: any) => ({
                 ...prev,
-                disciplines: [...(prev.disciplines || []), newDiscipline]
+                disciplines: (prev.disciplines || []).filter((d: DisciplineResponse) => d.id !== selectedDiscipline.id)
             }));
 
             handleCloseDisciplineModal();
         } catch (err: any) {
-            console.error('Ошибка создания дисциплины:', err);
-            alert('Не удалось создать дисциплину: ' + (err.response?.data?.message || err.message));
+            console.error('Ошибка удаления дисциплины:', err);
+            setDisciplineError(err.response?.data?.message || err.message || 'Не удалось удалить дисциплину');
         } finally {
             setSavingDiscipline(false);
         }
@@ -679,6 +742,7 @@ const ProgramEditPage = () => {
                                                     <th>Название дисциплины</th>
                                                     <th>Семестр</th>
                                                     <th>Количество часов</th>
+                                                    <th></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -687,6 +751,15 @@ const ProgramEditPage = () => {
                                                         <td>{discipline.name}</td>
                                                         <td>{discipline.semester}</td>
                                                         <td>{discipline.totalHours}</td>
+                                                        <td className="text-end">
+                                                            <Button
+                                                                variant="outline-primary"
+                                                                size="sm"
+                                                                onClick={() => handleOpenEditDisciplineModal(discipline)}
+                                                            >
+                                                                Редактировать
+                                                            </Button>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -767,10 +840,12 @@ const ProgramEditPage = () => {
                 </Modal.Footer>
             </Modal>
 
-            {/* Модальное окно для добавления дисциплины */}
+            {/* Модальное окно для добавления / редактирования дисциплины */}
             <Modal show={showDisciplineModal} onHide={handleCloseDisciplineModal} centered>
                 <Modal.Header closeButton>
-                    <Modal.Title>Добавление дисциплины</Modal.Title>
+                    <Modal.Title>
+                        {selectedDiscipline ? 'Редактирование дисциплины' : 'Добавление дисциплины'}
+                    </Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <Form>
@@ -803,20 +878,35 @@ const ProgramEditPage = () => {
                                 onChange={(e) => handleDisciplineInputChange('totalHours', parseInt(e.target.value) || 0)}
                             />
                         </Form.Group>
+
+                        {disciplineError && (
+                            <Alert variant="danger" className="mb-0">
+                                {disciplineError}
+                            </Alert>
+                        )}
                     </Form>
                 </Modal.Body>
                 <Modal.Footer>
+                    {selectedDiscipline && (
+                        <Button
+                            variant="danger"
+                            onClick={handleDeleteDiscipline}
+                            disabled={savingDiscipline}
+                        >
+                            Удалить
+                        </Button>
+                    )}
                     <Button variant="secondary" onClick={handleCloseDisciplineModal} disabled={savingDiscipline}>
                         Отмена
                     </Button>
-                    <Button variant="primary" onClick={handleAddDiscipline} disabled={savingDiscipline}>
+                    <Button variant="primary" onClick={handleSaveDiscipline} disabled={savingDiscipline}>
                         {savingDiscipline ? (
                             <>
                                 <Spinner animation="border" size="sm" className="me-2" />
-                                Добавление...
+                                Сохранение...
                             </>
                         ) : (
-                            'Добавить'
+                            selectedDiscipline ? 'Сохранить изменения' : 'Добавить'
                         )}
                     </Button>
                 </Modal.Footer>

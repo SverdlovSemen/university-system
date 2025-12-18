@@ -173,6 +173,64 @@ public class ProgramController {
         }
     }
 
+    @GetMapping("/api/programs/{programId}/disciplines/{disciplineId}")
+    public ResponseEntity<DisciplineResponse> getDiscipline(
+            @PathVariable Long programId,
+            @PathVariable Long disciplineId
+    ) {
+        try {
+            var discipline = programService.getDiscipline(programId, disciplineId);
+            DisciplineResponse response = new DisciplineResponse(
+                    discipline.getId(),
+                    discipline.getName(),
+                    discipline.getSemester(),
+                    discipline.getTotalHours()
+            );
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/api/programs/{programId}/disciplines/{disciplineId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'UNIVERSITY_ADMIN', 'EDITOR')")
+    public ResponseEntity<?> updateDiscipline(
+            @PathVariable Long programId,
+            @PathVariable Long disciplineId,
+            @Valid @RequestBody DisciplineRequest request
+    ) {
+        try {
+            var discipline = programService.updateDiscipline(programId, disciplineId, request);
+            DisciplineResponse response = new DisciplineResponse(
+                    discipline.getId(),
+                    discipline.getName(),
+                    discipline.getSemester(),
+                    discipline.getTotalHours()
+            );
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ошибка при обновлении дисциплины");
+        }
+    }
+
+    @DeleteMapping("/api/programs/{programId}/disciplines/{disciplineId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'UNIVERSITY_ADMIN', 'EDITOR')")
+    public ResponseEntity<?> deleteDiscipline(
+            @PathVariable Long programId,
+            @PathVariable Long disciplineId
+    ) {
+        try {
+            programService.deleteDiscipline(programId, disciplineId);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ошибка при удалении дисциплины");
+        }
+    }
+
     private ProgramResponse mapProgram(Program p) {
         var admission = p.getAdmissionConditions().stream().map(ac -> {
             List<SubjectResponse> subjects = ac.getProgramSubjects().stream()

@@ -148,6 +148,40 @@ public class ProgramService {
         programRepository.delete(program);
     }
 
+    @Transactional
+    public Discipline updateDiscipline(Long programId, Long disciplineId, DisciplineRequest request) {
+        Discipline discipline = disciplineRepository.findById(disciplineId)
+                .orElseThrow(() -> new IllegalArgumentException("Дисциплина не найдена"));
+        if (!discipline.getProgram().getId().equals(programId)) {
+            throw new IllegalArgumentException("Дисциплина не принадлежит программе");
+        }
+        checkCanModifyUniversity(discipline.getProgram().getFaculty().getUniversity().getId());
+        discipline.setName(request.name());
+        discipline.setSemester(request.semester());
+        discipline.setTotalHours(request.totalHours());
+        return disciplineRepository.save(discipline);
+    }
+
+    public Discipline getDiscipline(Long programId, Long disciplineId) {
+        Discipline discipline = disciplineRepository.findById(disciplineId)
+                .orElseThrow(() -> new IllegalArgumentException("Дисциплина не найдена"));
+        if (!discipline.getProgram().getId().equals(programId)) {
+            throw new IllegalArgumentException("Дисциплина не принадлежит программе");
+        }
+        return discipline;
+    }
+
+    @Transactional
+    public void deleteDiscipline(Long programId, Long disciplineId) {
+        Discipline discipline = disciplineRepository.findById(disciplineId)
+                .orElseThrow(() -> new IllegalArgumentException("Дисциплина не найдена"));
+        if (!discipline.getProgram().getId().equals(programId)) {
+            throw new IllegalArgumentException("Дисциплина не принадлежит программе");
+        }
+        checkCanModifyUniversity(discipline.getProgram().getFaculty().getUniversity().getId());
+        disciplineRepository.delete(discipline);
+    }
+
     private void checkCanModifyUniversity(Long universityId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) throw new AccessDeniedException("Unauthorized");
@@ -162,4 +196,3 @@ public class ProgramService {
         throw new AccessDeniedException("Not allowed");
     }
 }
-

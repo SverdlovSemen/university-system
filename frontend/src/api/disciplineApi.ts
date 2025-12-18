@@ -12,6 +12,19 @@ export const createDiscipline = async (programId: number, data: DisciplineReques
     return response.data;
 };
 
+export const updateDiscipline = async (
+    programId: number,
+    disciplineId: number,
+    data: DisciplineRequest
+): Promise<DisciplineResponse> => {
+    const response = await axios.put(`/api/programs/${programId}/disciplines/${disciplineId}`, data);
+    return response.data;
+};
+
+export const deleteDiscipline = async (programId: number, disciplineId: number): Promise<void> => {
+    await axios.delete(`/api/programs/${programId}/disciplines/${disciplineId}`);
+};
+
 export const getDisciplinesByProgram = async (programId: number): Promise<DisciplineResponse[]> => {
     // Получаем программу, чтобы узнать universityId
     const programResponse = await axios.get(`/api/programs/${programId}`);
@@ -20,4 +33,3 @@ export const getDisciplinesByProgram = async (programId: number): Promise<Discip
     const response = await axios.get(`/api/universities/${universityId}/programs/${programId}/disciplines`);
     return response.data;
 };
-

@@ -77,7 +77,7 @@ const AdmissionConditionCard: React.FC<AdmissionConditionCardProps> = ({ conditi
                         <hr />
                         <h6 className="text-muted mb-3">
                             <i className="bi bi-book me-2"></i>
-                            Предметы для поступления
+                            Предметы для поступления (отображаються в порядке приоритета)
                         </h6>
                         <div className="d-flex flex-wrap gap-2">
                             {condition.subjects.map((subject) => (
