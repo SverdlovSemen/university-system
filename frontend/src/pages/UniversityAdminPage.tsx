@@ -24,6 +24,9 @@ const UniversityAdminPage = () => {
     const [saveError, setSaveError] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
+    // Состояния для ошибок полей
+    const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
+
     // Состояния для факультетов
     const [faculties, setFaculties] = useState<FacultyResponse[]>([]);
     const [facultiesLoading, setFacultiesLoading] = useState(false);
@@ -145,12 +148,59 @@ const UniversityAdminPage = () => {
 
 
 
+    // Функция валидации email
+    const validateEmail = (email: string): string | null => {
+        if (!email) return null; // Поле необязательное
+        if (!email.includes('@')) {
+            return 'Введите корректный email';
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return 'Введите корректный email';
+        }
+        return null;
+    };
+
+    // Функция валидации года основания
+    const validateFoundedYear = (year: string): string | null => {
+        if (!year) return null; // Поле необязательное
+        const yearNum = parseInt(year);
+        if (isNaN(yearNum)) {
+            return 'Введите корректный год';
+        }
+        if (yearNum < 1724) {
+            return 'Год основания Российского ВУЗа не может быть меньше 1724 г.';
+        }
+        if (yearNum > new Date().getFullYear()) {
+            return 'Год основания ВУЗа не может быть больше текущего года';
+        }
+        return null;
+    };
+
+    // Функция валидации сайта
+    const validateWebsite = (website: string): string | null => {
+        if (!website) return null; // Поле необязательное
+        // Разрешаем только http(s):// и домен, опционально путь
+        const websiteRegex = /^(https?:\/\/)([\w-]+\.)+[\w-]{2,}(\/[^\s]*)?$/i;
+        if (!websiteRegex.test(website)) {
+            return 'Введите корректный адрес сайта (например, https://example.com)';
+        }
+        return null;
+    };
+
     // Обработчик изменения полей формы
     const handleInputChange = (field: string, value: string | number) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
         }));
+
+        // Убираем ошибки полей при изменении данных
+        setFieldErrors(prev => ({
+            ...prev,
+            [field]: ''
+        }));
+
         // Сбрасываем сообщения при изменении данных
         setSaveError(null);
         setSaveSuccess(false);
@@ -165,23 +215,78 @@ const UniversityAdminPage = () => {
 
         // Валидация обязательных полей
         if (!formData.fullName.trim()) {
-            setSaveError('Полное название университета обязательно для заполнения');
+            setFieldErrors(prev => ({
+                ...prev,
+                fullName: 'Полное название университета обязательно для заполнения'
+            }));
+            setSaveError('Проверьте правильность заполнения полей');
             return;
         }
 
         if (!formData.abbreviation.trim()) {
-            setSaveError('Аббревиатура университета обязательна для заполнения');
+            setFieldErrors(prev => ({
+                ...prev,
+                abbreviation: 'Аббревиатура университета обязательна для заполнения'
+            }));
+            setSaveError('Проверьте правильность заполнения полей');
             return;
         }
 
         if (!formData.type.trim()) {
-            setSaveError('Тип университета обязателен для заполнения');
+            setFieldErrors(prev => ({
+                ...prev,
+                type: 'Тип ВУЗа обязателен для заполнения'
+            }));
+            setSaveError('Проверьте правильность заполнения полей');
             return;
         }
 
         if (!formData.cityId || formData.cityId === 0) {
-            setSaveError('Необходимо выбрать город');
+            setFieldErrors(prev => ({
+                ...prev,
+                cityId: 'Необходимо выбрать город'
+            }));
+            setSaveError('Проверьте правильность заполнения полей');
             return;
+        }
+
+        // Валидация года основания
+        if (formData.foundedYear.trim()) {
+            const yearError = validateFoundedYear(formData.foundedYear.trim());
+            if (yearError) {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    foundedYear: yearError
+                }));
+                setSaveError('Проверьте правильность заполнения полей');
+                return;
+            }
+        }
+
+        // Валидация сайта
+        if (formData.website.trim()) {
+            const websiteError = validateWebsite(formData.website.trim());
+            if (websiteError) {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    website: websiteError
+                }));
+                setSaveError('Проверьте правильность заполнения полей');
+                return;
+            }
+        }
+
+        // Валидация email администрации
+        if (formData.adminEmail.trim()) {
+            const emailError = validateEmail(formData.adminEmail.trim());
+            if (emailError) {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    adminEmail: emailError
+                }));
+                setSaveError('Проверьте правильность заполнения полей');
+                return;
+            }
         }
 
         try {
@@ -285,7 +390,14 @@ const UniversityAdminPage = () => {
                                                     value={formData.fullName}
                                                     onChange={(e) => handleInputChange('fullName', e.target.value)}
                                                     placeholder="Введите полное название университета"
+                                                    maxLength={100}
+                                                    isInvalid={!!fieldErrors.fullName}
                                                 />
+                                                {fieldErrors.fullName && (
+                                                    <Form.Control.Feedback type="invalid">
+                                                        {fieldErrors.fullName}
+                                                    </Form.Control.Feedback>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -298,7 +410,14 @@ const UniversityAdminPage = () => {
                                                     type="text"
                                                     value={formData.abbreviation}
                                                     onChange={(e) => handleInputChange('abbreviation', e.target.value)}
+                                                    maxLength={30}
+                                                    isInvalid={!!fieldErrors.abbreviation}
                                                 />
+                                                {fieldErrors.abbreviation && (
+                                                    <Form.Control.Feedback type="invalid">
+                                                        {fieldErrors.abbreviation}
+                                                    </Form.Control.Feedback>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                         <Col md={6}>
@@ -308,7 +427,14 @@ const UniversityAdminPage = () => {
                                                     type="text"
                                                     value={formData.type}
                                                     onChange={(e) => handleInputChange('type', e.target.value)}
+                                                    maxLength={30}
+                                                    isInvalid={!!fieldErrors.type}
                                                 />
+                                                {fieldErrors.type && (
+                                                    <Form.Control.Feedback type="invalid">
+                                                        {fieldErrors.type}
+                                                    </Form.Control.Feedback>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -321,6 +447,7 @@ const UniversityAdminPage = () => {
                                                     type="text"
                                                     value={formData.ownershipType}
                                                     onChange={(e) => handleInputChange('ownershipType', e.target.value)}
+                                                    maxLength={30}
                                                 />
                                             </Form.Group>
                                         </Col>
@@ -330,6 +457,7 @@ const UniversityAdminPage = () => {
                                                 <Form.Select
                                                     value={formData.cityId}
                                                     onChange={(e) => handleInputChange('cityId', parseInt(e.target.value))}
+                                                    isInvalid={!!fieldErrors.cityId}
                                                 >
                                                     <option value={0}>Выберите город</option>
                                                     {cities.map(city => (
@@ -338,6 +466,11 @@ const UniversityAdminPage = () => {
                                                         </option>
                                                     ))}
                                                 </Form.Select>
+                                                {fieldErrors.cityId && (
+                                                    <Form.Control.Feedback type="invalid">
+                                                        {fieldErrors.cityId}
+                                                    </Form.Control.Feedback>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -350,9 +483,23 @@ const UniversityAdminPage = () => {
                                                     type="number"
                                                     value={formData.foundedYear}
                                                     onChange={(e) => handleInputChange('foundedYear', e.target.value)}
-                                                    min="1000"
+                                                    onKeyDown={(e)=>{
+                                                        if(!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight/.test(e.key)) {
+                                                            e.preventDefault();
+                                                        }
+                                                        if(formData.foundedYear.length > 10 && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+                                                            e.preventDefault();
+                                                        }
+                                                    }}
+                                                    min="1724"
                                                     max={new Date().getFullYear()}
+                                                    isInvalid={!!fieldErrors.foundedYear}
                                                 />
+                                                {fieldErrors.foundedYear && (
+                                                    <Form.Control.Feedback type="invalid">
+                                                        {fieldErrors.foundedYear}
+                                                    </Form.Control.Feedback>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                         <Col md={6}>
@@ -363,7 +510,14 @@ const UniversityAdminPage = () => {
                                                     value={formData.website}
                                                     onChange={(e) => handleInputChange('website', e.target.value)}
                                                     placeholder="https://example.com"
+                                                    maxLength={40}
+                                                    isInvalid={!!fieldErrors.website}
                                                 />
+                                                {fieldErrors.website && (
+                                                    <Form.Control.Feedback type="invalid">
+                                                        {fieldErrors.website}
+                                                    </Form.Control.Feedback>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -376,8 +530,15 @@ const UniversityAdminPage = () => {
                                                     type="email"
                                                     value={formData.adminEmail}
                                                     onChange={(e) => handleInputChange('adminEmail', e.target.value)}
+                                                    maxLength={40}
                                                     placeholder="admin@university.com"
+                                                    isInvalid={!!fieldErrors.adminEmail}
                                                 />
+                                                {fieldErrors.adminEmail && (
+                                                    <Form.Control.Feedback type="invalid">
+                                                        {fieldErrors.adminEmail}
+                                                    </Form.Control.Feedback>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                         <Col md={6}>
@@ -387,6 +548,12 @@ const UniversityAdminPage = () => {
                                                     type="tel"
                                                     value={formData.adminPhone}
                                                     onChange={(e) => handleInputChange('adminPhone', e.target.value)}
+                                                    onKeyDown={(e)=>{
+                                                        if(!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight/.test(e.key)) {
+                                                            e.preventDefault();
+                                                        }
+                                                    }}
+                                                    maxLength={12}
                                                     placeholder="+7 (999) 999-99-99"
                                                 />
                                             </Form.Group>
@@ -604,35 +771,35 @@ const UniversityAdminPage = () => {
                     </Card>
                 </Tab>
 
-                {/* Вкладка: Инфраструктура */}
-                {/*<Tab eventKey="infrastructure" title="Инфраструктура">*/}
-                {/*    <Card>*/}
-                {/*        <Card.Header as="h5">Управление инфраструктурой</Card.Header>*/}
-                {/*        <Card.Body>*/}
-                {/*            <Card.Text>*/}
-                {/*                Здесь вы сможете управлять инфраструктурой университета (общежития, библиотеки, спортзалы и т.д.).*/}
-                {/*            </Card.Text>*/}
-                {/*            <p className="text-muted">*/}
-                {/*                Содержимое в разработке...*/}
-                {/*            </p>*/}
-                {/*        </Card.Body>*/}
-                {/*    </Card>*/}
-                {/*</Tab>*/}
+                 {/*Вкладка: Инфраструктура*/}
+                <Tab eventKey="infrastructure" title="Инфраструктура">
+                    <Card>
+                        <Card.Header as="h5">Управление инфраструктурой</Card.Header>
+                        <Card.Body>
+                            <Card.Text>
+                                Здесь вы сможете управлять инфраструктурой университета (общежития, библиотеки, спортзалы и т.д.).
+                            </Card.Text>
+                            <p className="text-muted">
+                                Содержимое в разработке...
+                            </p>
+                        </Card.Body>
+                    </Card>
+                </Tab>
 
-                {/* Вкладка: Работники университета */}
-                {/*<Tab eventKey="employees" title="Работники университета">*/}
-                {/*    <Card>*/}
-                {/*        <Card.Header as="h5">Управление работниками</Card.Header>*/}
-                {/*        <Card.Body>*/}
-                {/*            <Card.Text>*/}
-                {/*                Здесь вы сможете управлять работниками университета (редакторы, администраторы).*/}
-                {/*            </Card.Text>*/}
-                {/*            <p className="text-muted">*/}
-                {/*                Содержимое в разработке...*/}
-                {/*            </p>*/}
-                {/*        </Card.Body>*/}
-                {/*    </Card>*/}
-                {/*</Tab>*/}
+                 {/*Вкладка: Работники университета*/}
+                <Tab eventKey="employees" title="Работники университета">
+                    <Card>
+                        <Card.Header as="h5">Управление работниками</Card.Header>
+                        <Card.Body>
+                            <Card.Text>
+                                Здесь вы сможете управлять работниками университета (редакторы, администраторы).
+                            </Card.Text>
+                            <p className="text-muted">
+                                Содержимое в разработке...
+                            </p>
+                        </Card.Body>
+                    </Card>
+                </Tab>
             </Tabs>
         </Container>
     );
