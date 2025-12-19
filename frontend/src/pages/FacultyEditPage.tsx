@@ -3,7 +3,7 @@ import { Container, Card, Form, Row, Col, Button, Alert, Spinner } from 'react-b
 import { useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { createFaculty, updateFaculty, getFacultyById } from '../api/facultyApi';
-import { FacultyRequest, FacultyResponse } from '../types';
+import { FacultyRequest } from '../types';
 
 const FacultyEditPage = () => {
     const navigate = useNavigate();
@@ -16,6 +16,7 @@ const FacultyEditPage = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
 
     const [formData, setFormData] = useState<FacultyRequest>({
         fullName: '',
@@ -75,34 +76,60 @@ const FacultyEditPage = () => {
             [field]: value
         }));
         setSaveError(null);
+        // Очищаем ошибку для конкретного поля при вводе
+        if (fieldErrors[field]) {
+            setFieldErrors(prev => ({
+                ...prev,
+                [field]: ''
+            }));
+        }
     };
 
     // Валидация формы
-    const validateForm = (): string | null => {
+    const validateForm = (): boolean => {
+        const errors: {[key: string]: string} = {};
+        let hasErrors = false;
+
+        // Валидация полного названия
         if (!formData.fullName.trim()) {
-            return 'Полное название факультета обязательно для заполнения';
+            errors.fullName = 'Полное название факультета обязательно для заполнения';
+            hasErrors = true;
+        } else if (formData.fullName.trim().length > 100) {
+            errors.fullName = 'Полное название не должно превышать 100 символов';
+            hasErrors = true;
         }
 
-        if (!formData.universityId || formData.universityId === 0) {
-            return 'ID университета отсутствует';
+        // Валидация аббревиатуры (обязательное поле)
+        if (!formData.abbreviation || !formData.abbreviation.trim()) {
+            errors.abbreviation = 'Аббревиатура факультета обязательна для заполнения';
+            hasErrors = true;
+        } else if (formData.abbreviation.trim().length > 20) {
+            errors.abbreviation = 'Аббревиатура не должна превышать 20 символов';
+            hasErrors = true;
         }
 
         // Валидация email если указан
         if (formData.email && formData.email.trim()) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(formData.email.trim())) {
-                return 'Некорректный формат email';
+                errors.email = 'Некорректный формат email';
+                hasErrors = true;
             }
         }
 
-        return null;
+        if (!formData.universityId || formData.universityId === 0) {
+            errors.universityId = 'ID университета отсутствует';
+            hasErrors = true;
+        }
+
+        setFieldErrors(errors);
+        return !hasErrors;
     };
 
     // Обработчик сохранения
     const handleSave = async () => {
-        const validationError = validateForm();
-        if (validationError) {
-            setSaveError(validationError);
+        if (!validateForm()) {
+            setSaveError('Проверьте правильность заполнения полей');
             return;
         }
 
@@ -128,8 +155,8 @@ const FacultyEditPage = () => {
                 await createFaculty(requestData);
             }
 
-            // Перенаправляем обратно на страницу администрирования университета
-            navigate('/university-admin');
+            // Перенаправляем обратно на страницу администрирования университета с открытой вкладкой "Факультеты"
+            navigate('/university-admin?tab=faculties');
         } catch (err: any) {
             console.error('Ошибка сохранения факультета:', err);
 
@@ -150,7 +177,7 @@ const FacultyEditPage = () => {
     };
 
     const handleCancel = () => {
-        navigate('/university-admin');
+        navigate('/university-admin?tab=faculties');
     };
 
     if (loading) {
@@ -198,8 +225,15 @@ const FacultyEditPage = () => {
                                         value={formData.fullName}
                                         onChange={(e) => handleInputChange('fullName', e.target.value)}
                                         placeholder="Введите полное название факультета"
+                                        maxLength={100}
                                         required
+                                        isInvalid={!!fieldErrors.fullName}
                                     />
+                                    {fieldErrors.fullName && (
+                                        <Form.Control.Feedback type="invalid">
+                                            {fieldErrors.fullName}
+                                        </Form.Control.Feedback>
+                                    )}
                                 </Form.Group>
                             </Col>
                         </Row>
@@ -208,13 +242,21 @@ const FacultyEditPage = () => {
                         <Row className="mb-3">
                             <Col md={6}>
                                 <Form.Group>
-                                    <Form.Label><strong>Аббревиатура</strong></Form.Label>
+                                    <Form.Label><strong>Аббревиатура *</strong></Form.Label>
                                     <Form.Control
                                         type="text"
                                         value={formData.abbreviation}
                                         onChange={(e) => handleInputChange('abbreviation', e.target.value)}
                                         placeholder="Например: ФИТ, ФЭУП"
+                                        maxLength={20}
+                                        required
+                                        isInvalid={!!fieldErrors.abbreviation}
                                     />
+                                    {fieldErrors.abbreviation && (
+                                        <Form.Control.Feedback type="invalid">
+                                            {fieldErrors.abbreviation}
+                                        </Form.Control.Feedback>
+                                    )}
                                 </Form.Group>
                             </Col>
                         </Row>
@@ -229,6 +271,7 @@ const FacultyEditPage = () => {
                                         value={formData.deanName}
                                         onChange={(e) => handleInputChange('deanName', e.target.value)}
                                         placeholder="Иванов Иван Иванович"
+                                        maxLength={100}
                                     />
                                 </Form.Group>
                             </Col>
@@ -240,6 +283,7 @@ const FacultyEditPage = () => {
                                         value={formData.deanContacts}
                                         onChange={(e) => handleInputChange('deanContacts', e.target.value)}
                                         placeholder="Дополнительные контакты"
+                                        maxLength={100}
                                     />
                                 </Form.Group>
                             </Col>
@@ -256,6 +300,7 @@ const FacultyEditPage = () => {
                                         value={formData.address}
                                         onChange={(e) => handleInputChange('address', e.target.value)}
                                         placeholder="Адрес факультета"
+                                        maxLength={100}
                                     />
                                 </Form.Group>
                             </Col>
@@ -271,17 +316,30 @@ const FacultyEditPage = () => {
                                         value={formData.email}
                                         onChange={(e) => handleInputChange('email', e.target.value)}
                                         placeholder="faculty@university.com"
+                                        isInvalid={!!fieldErrors.email}
+                                        maxLength={40}
                                     />
+                                    {fieldErrors.email && (
+                                        <Form.Control.Feedback type="invalid">
+                                            {fieldErrors.email}
+                                        </Form.Control.Feedback>
+                                    )}
                                 </Form.Group>
                             </Col>
                             <Col md={6}>
                                 <Form.Group>
                                     <Form.Label><strong>Телефон</strong></Form.Label>
                                     <Form.Control
-                                        type="tel"
+                                        type="number"
                                         value={formData.phone}
                                         onChange={(e) => handleInputChange('phone', e.target.value)}
-                                        placeholder="+7 (999) 999-99-99"
+                                        placeholder="79999999999"
+                                        onKeyDown={(e)=>{
+                                            if(!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight/.test(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        maxLength={13}
                                     />
                                 </Form.Group>
                             </Col>

@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Container, Tab, Tabs, Card, Form, Row, Col, Spinner, Alert, Button, Table } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import { Container, Tab, Tabs, Card, Form, Row, Col, Spinner, Alert, Button, Table, Modal } from 'react-bootstrap';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { getUniversityById, updateUniversity } from '../api/universityApi';
 import { fetchAllCities } from '../api/cityApi';
-import { getFacultiesByUniversity } from '../api/facultyApi';
+import { getFacultiesByUniversity, deleteFaculty } from '../api/facultyApi';
 import { fetchProgramDetailsByUniversity } from '../api/programApi';
 import { UniversityResponse, CityResponse, UniversityRequest, FacultyResponse, ProgramResponse } from '../types';
 
 
 
 const UniversityAdminPage = () => {
-    const [activeTab, setActiveTab] = useState('info');
+    const [searchParams] = useSearchParams();
+    const [activeTab, setActiveTab] = useState(() => {
+        return searchParams.get('tab') || 'info';
+    });
     const navigate = useNavigate();
     const authContext = useContext(AuthContext);
     const user = authContext?.user;
@@ -36,6 +39,13 @@ const UniversityAdminPage = () => {
     const [programs, setPrograms] = useState<ProgramResponse[]>([]);
     const [programsLoading, setProgramsLoading] = useState(false);
     const [programsError, setProgramsError] = useState<string | null>(null);
+
+    // Состояния для модальных окон удаления факультета
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showTransferModal, setShowTransferModal] = useState(false);
+    const [facultyToDelete, setFacultyToDelete] = useState<FacultyResponse | null>(null);
+    const [deletingFaculty, setDeletingFaculty] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
 
 
@@ -356,6 +366,74 @@ const UniversityAdminPage = () => {
         }
     };
 
+    // Обработчики модальных окон удаления факультета
+    const handleOpenDeleteModal = (faculty: FacultyResponse) => {
+        setFacultyToDelete(faculty);
+        setShowDeleteModal(true);
+    };
+
+    const handleCloseDeleteModal = () => {
+        setShowDeleteModal(false);
+        setFacultyToDelete(null);
+        setDeleteError(null);
+    };
+
+    const handleDeleteWithPrograms = async () => {
+        if (!facultyToDelete) return;
+
+        try {
+            setDeletingFaculty(true);
+            setDeleteError(null);
+
+            // Удаляем факультет (каскадно удалятся все программы и связанные данные)
+            await deleteFaculty(facultyToDelete.id);
+
+            // Обновляем список факультетов
+            if (university?.id) {
+                const updatedFaculties = await getFacultiesByUniversity(university.id);
+                setFaculties(updatedFaculties);
+            }
+
+            // Закрываем модальное окно
+            handleCloseDeleteModal();
+
+            // Можно показать уведомление об успешном удалении
+            alert(`Факультет "${facultyToDelete.fullName}" успешно удален вместе со всеми программами`);
+
+        } catch (err: any) {
+            console.error('Ошибка удаления факультета:', err);
+
+            let errorMessage = 'Не удалось удалить факультет';
+
+            if (err.response?.status === 403) {
+                errorMessage = 'Доступ запрещен. У вас недостаточно прав для удаления этого факультета.';
+            } else if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            } else if (err.response?.data) {
+                errorMessage = typeof err.response.data === 'string'
+                    ? err.response.data
+                    : JSON.stringify(err.response.data);
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+
+            setDeleteError(errorMessage);
+        } finally {
+            setDeletingFaculty(false);
+        }
+    };
+
+    const handleOpenTransferModal = () => {
+        setShowDeleteModal(false);
+        setShowTransferModal(true);
+    };
+
+    const handleCloseTransferModal = () => {
+        setShowTransferModal(false);
+        setFacultyToDelete(null);
+        setDeleteError(null);
+    };
+
     return (
         <Container className="mt-4">
                 <h2 className="mb-4">Панель администратора университета</h2>
@@ -363,7 +441,14 @@ const UniversityAdminPage = () => {
             <Tabs
                 id="university-admin-tabs"
                 activeKey={activeTab}
-                onSelect={(k) => setActiveTab(k || 'info')}
+                onSelect={(k) => {
+                    const tab = k || 'info';
+                    setActiveTab(tab);
+                    // Обновляем URL без перезагрузки страницы
+                    const newSearchParams = new URLSearchParams(searchParams);
+                    newSearchParams.set('tab', tab);
+                    navigate(`?${newSearchParams.toString()}`, { replace: true });
+                }}
                 className="mb-3"
             >
                 {/* Вкладка: Основная информация об университете  */}
@@ -554,7 +639,7 @@ const UniversityAdminPage = () => {
                                                         }
                                                     }}
                                                     maxLength={12}
-                                                    placeholder="+7 (999) 999-99-99"
+                                                    placeholder="79999999999"
                                                 />
                                             </Form.Group>
                                         </Col>
@@ -676,8 +761,16 @@ const UniversityAdminPage = () => {
                                                             variant="primary"
                                                             size="sm"
                                                             onClick={() => navigate(`/faculty/edit/${faculty.id}`)}
+                                                            className="me-2"
                                                         >
                                                             Редактировать
+                                                        </Button>
+                                                        <Button
+                                                            variant="danger"
+                                                            size="sm"
+                                                            onClick={() => handleOpenDeleteModal(faculty)}
+                                                        >
+                                                            Удалить
                                                         </Button>
                                                     </td>
                                                 </tr>
@@ -801,6 +894,75 @@ const UniversityAdminPage = () => {
                     </Card>
                 </Tab>
             </Tabs>
+
+            {/* Модальное окно подтверждения удаления факультета */}
+            <Modal show={showDeleteModal} onHide={handleCloseDeleteModal} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Удаление факультета</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {facultyToDelete && (
+                        <>
+                            <p>Вы уверены, что хотите удалить факультет <strong>"{facultyToDelete.fullName}"</strong>?</p>
+                            <Alert variant="warning">
+                                Выберите один из вариантов удаления:
+                            </Alert>
+                            {deleteError && (
+                                <Alert variant="danger" className="mt-3">
+                                    {deleteError}
+                                </Alert>
+                            )}
+                        </>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleCloseDeleteModal} disabled={deletingFaculty}>
+                        Отмена
+                    </Button>
+                    <Button variant="danger" onClick={handleDeleteWithPrograms} disabled={deletingFaculty}>
+                        {deletingFaculty ? (
+                            <>
+                                <Spinner
+                                    as="span"
+                                    animation="border"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                    className="me-2"
+                                />
+                                Удаление...
+                            </>
+                        ) : (
+                            'Удалить вместе с программами'
+                        )}
+                    </Button>
+                    <Button variant="primary" onClick={handleOpenTransferModal} disabled={deletingFaculty}>
+                        Удалить и перевести все программы на другой факультет
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Модальное окно переноса программ на другой факультет */}
+            <Modal show={showTransferModal} onHide={handleCloseTransferModal} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Перенос программ на другой факультет</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {facultyToDelete && (
+                        <>
+                            <p>Перенос программ факультета <strong>"{facultyToDelete.fullName}"</strong> на другой факультет.</p>
+                            <Alert variant="info">
+                                Функционал в разработке...
+                            </Alert>
+                        </>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleCloseTransferModal}>
+                        Отмена
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Container>
     );
 };
