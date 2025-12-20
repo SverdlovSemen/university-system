@@ -22,6 +22,11 @@ const AdmissionConditionEditPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [program, setProgram] = useState<ProgramResponse | null>(null);
+    const [yearError, setYearError] = useState<string | null>(null);
+    const [passingScoreError, setPassingScoreError] = useState<string | null>(null);
+    const [budgetPlacesError, setBudgetPlacesError] = useState<string | null>(null);
+    const [targetedPlacesError, setTargetedPlacesError] = useState<string | null>(null);
+    const [paidPlacesError, setPaidPlacesError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState<AdmissionConditionRequest>({
         year: new Date().getFullYear(),
@@ -90,6 +95,141 @@ const AdmissionConditionEditPage = () => {
             ...prev,
             [field]: value
         }));
+
+        // Валидация года при изменении
+        if (field === 'year' && typeof value === 'number') {
+            validateYear(value);
+        }
+
+        // Валидация проходного балла при изменении
+        if (field === 'passingScore') {
+            if (value === undefined) {
+                setPassingScoreError(null);
+            } else if (typeof value === 'number') {
+                validatePassingScore(value);
+            }
+        }
+
+        // Валидация бюджетных мест
+        if (field === 'budgetPlaces') {
+            if (value === undefined) {
+                setBudgetPlacesError(null);
+            } else if (typeof value === 'number') {
+                validatePlaces(value, 'budgetPlaces');
+            }
+        }
+
+        // Валидация целевых мест
+        if (field === 'targetedPlaces') {
+            if (value === undefined) {
+                setTargetedPlacesError(null);
+            } else if (typeof value === 'number') {
+                validatePlaces(value, 'targetedPlaces');
+            }
+        }
+
+        // Валидация платных мест
+        if (field === 'paidPlaces') {
+            if (value === undefined) {
+                setPaidPlacesError(null);
+            } else if (typeof value === 'number') {
+                validatePlaces(value, 'paidPlaces');
+            }
+        }
+    };
+
+    // Валидация года
+    const validateYear = (year: number): boolean => {
+        const currentYear = new Date().getFullYear();
+        const minYear = 2009;
+
+        // Проверка диапазона
+        if (year < minYear || year > currentYear) {
+            setYearError(`Год должен быть от ${minYear} до ${currentYear}`);
+            return false;
+        }
+
+        // Проверка на дублирование года
+        if (program) {
+            if (!isEditMode) {
+                // Режим создания: проверяем, что год не существует
+                const yearExists = program.admissionConditions.some(ac => ac.year === year);
+                if (yearExists) {
+                    setYearError(`Условие поступления для ${year} года уже существует`);
+                    return false;
+                }
+            } else if (conditionId) {
+                // Режим редактирования: проверяем, что год не совпадает с другими условиями
+                const yearExists = program.admissionConditions.some(
+                    ac => ac.year === year && ac.id !== parseInt(conditionId)
+                );
+                if (yearExists) {
+                    setYearError(`Условие поступления для ${year} года уже существует`);
+                    return false;
+                }
+            }
+        }
+
+        setYearError(null);
+        return true;
+    };
+
+    // Валидация проходного балла
+    const validatePassingScore = (score: number): boolean => {
+        const minScore = 0;
+        const maxScore = 100;
+
+        // Проверка диапазона
+        if (score < minScore || score > maxScore) {
+            setPassingScoreError(`Проходной балл должен быть от ${minScore} до ${maxScore}`);
+            return false;
+        }
+
+        setPassingScoreError(null);
+        return true;
+    };
+
+    // Валидация количества мест
+    const validatePlaces = (places: number, field: 'budgetPlaces' | 'targetedPlaces' | 'paidPlaces'): boolean => {
+        const minPlaces = 0;
+        const maxPlaces = 500;
+
+        const fieldNames = {
+            budgetPlaces: 'Бюджетные места',
+            targetedPlaces: 'Целевые места',
+            paidPlaces: 'Платные места'
+        };
+
+        const fieldName = fieldNames[field];
+
+        // Проверка на положительное число
+        if (places < minPlaces) {
+            const setError = field === 'budgetPlaces' ? setBudgetPlacesError :
+                            field === 'targetedPlaces' ? setTargetedPlacesError :
+                            setPaidPlacesError;
+            setError(`${fieldName} должны быть положительным числом`);
+            return false;
+        }
+
+        // Проверка диапазона
+        if (places > maxPlaces) {
+            const setError = field === 'budgetPlaces' ? setBudgetPlacesError :
+                            field === 'targetedPlaces' ? setTargetedPlacesError :
+                            setPaidPlacesError;
+            setError(`${fieldName} не могут превышать ${maxPlaces}`);
+            return false;
+        }
+
+        // Сброс ошибки для соответствующего поля
+        if (field === 'budgetPlaces') {
+            setBudgetPlacesError(null);
+        } else if (field === 'targetedPlaces') {
+            setTargetedPlacesError(null);
+        } else if (field === 'paidPlaces') {
+            setPaidPlacesError(null);
+        }
+
+        return true;
     };
 
     // Валидация формы
@@ -98,22 +238,29 @@ const AdmissionConditionEditPage = () => {
             return 'Укажите год';
         }
 
-        // Проверяем, что год не существует уже для этой программы
-        if (program && !isEditMode) {
-            const yearExists = program.admissionConditions.some(ac => ac.year === formData.year);
-            if (yearExists) {
-                return `Условие поступления для ${formData.year} года уже существует`;
-            }
+        // Используем существующую валидацию года
+        if (!validateYear(formData.year)) {
+            return yearError;
         }
 
-        // Если редактируем, проверяем что год не совпадает с другими условиями
-        if (program && isEditMode && conditionId) {
-            const yearExists = program.admissionConditions.some(
-                ac => ac.year === formData.year && ac.id !== parseInt(conditionId)
-            );
-            if (yearExists) {
-                return `Условие поступления для ${formData.year} года уже существует`;
-            }
+        // Валидация проходного балла
+        if (formData.passingScore !== undefined && !validatePassingScore(formData.passingScore)) {
+            return passingScoreError;
+        }
+
+        // Валидация бюджетных мест
+        if (formData.budgetPlaces !== undefined && !validatePlaces(formData.budgetPlaces, 'budgetPlaces')) {
+            return budgetPlacesError;
+        }
+
+        // Валидация целевых мест
+        if (formData.targetedPlaces !== undefined && !validatePlaces(formData.targetedPlaces, 'targetedPlaces')) {
+            return targetedPlacesError;
+        }
+
+        // Валидация платных мест
+        if (formData.paidPlaces !== undefined && !validatePlaces(formData.paidPlaces, 'paidPlaces')) {
+            return paidPlacesError;
         }
 
         return null;
@@ -142,8 +289,8 @@ const AdmissionConditionEditPage = () => {
                 await createAdmissionCondition(parseInt(programId), formData);
             }
 
-            // Перенаправляем обратно на страницу редактирования программы
-            navigate(`/program/edit/${programId}`);
+            // Перенаправляем обратно на страницу редактирования программы на вкладку "Условия поступления"
+            navigate(`/program/edit/${programId}?tab=admission`);
         } catch (err: any) {
             console.error('Ошибка сохранения условия поступления:', err);
 
@@ -166,7 +313,7 @@ const AdmissionConditionEditPage = () => {
     };
 
     const handleCancel = () => {
-        navigate(`/program/edit/${programId}`);
+        navigate(`/program/edit/${programId}?tab=admission`);
     };
 
     if (loading) {
@@ -229,12 +376,26 @@ const AdmissionConditionEditPage = () => {
                                                 value={formData.year}
                                                 onChange={(e) => handleInputChange('year', parseInt(e.target.value) || new Date().getFullYear())}
                                                 required
-                                                min={2000}
-                                                max={2100}
+                                                min={2009}
+                                                max={new Date().getFullYear()}
+                                                isInvalid={!!yearError}
+                                                onKeyDown={(e) => {
+                                                    // Разрешаем только цифры, Backspace, Delete, Tab, Arrow keys
+                                                    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                                                    if (!allowedKeys.includes(e.key) && !/[0-9]/.test(e.key)) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                             />
-                                            <Form.Text className="text-muted">
-                                                Укажите год набора
-                                            </Form.Text>
+                                            {yearError ? (
+                                                <Form.Control.Feedback type="invalid">
+                                                    {yearError}
+                                                </Form.Control.Feedback>
+                                            ) : (
+                                                <Form.Text className="text-muted">
+                                                    Укажите год набора (от 2009 до {new Date().getFullYear()})
+                                                </Form.Text>
+                                            )}
                                         </Form.Group>
                                     </Col>
                                     <Col md={6}>
@@ -243,9 +404,26 @@ const AdmissionConditionEditPage = () => {
                                             <Form.Control
                                                 type="number"
                                                 value={formData.admissionFee || ''}
-                                                onChange={(e) => handleInputChange('admissionFee', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    // Ограничиваем длину до 10 символов
+                                                    if (value.length <= 10) {
+                                                        handleInputChange('admissionFee', value ? parseFloat(value) : undefined);
+                                                    }
+                                                }}
                                                 placeholder="Например: 250000"
+                                                maxLength={10}
+                                                onKeyDown={(e) => {
+                                                    // Разрешаем только цифры, Backspace, Delete, Tab, Arrow keys
+                                                    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                                                    if (!allowedKeys.includes(e.key) && !/[0-9]/.test(e.key)) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                             />
+                                            <Form.Text className="text-muted">
+                                                Максимум 10 цифр
+                                            </Form.Text>
                                         </Form.Group>
                                     </Col>
                                 </Row>
@@ -258,10 +436,35 @@ const AdmissionConditionEditPage = () => {
                                             <Form.Control
                                                 type="number"
                                                 value={formData.passingScore || ''}
-                                                onChange={(e) => handleInputChange('passingScore', e.target.value ? parseFloat(e.target.value) : undefined)}
-                                                placeholder="Например: 250"
-                                                step="0.01"
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    // Ограничиваем длину до 5 символов
+                                                    if (value.length <= 5) {
+                                                        handleInputChange('passingScore', value ? parseFloat(value) : undefined);
+                                                    }
+                                                }}
+                                                placeholder="Например: 50"
+                                                maxLength={5}
+                                                min={0}
+                                                max={100}
+                                                isInvalid={!!passingScoreError}
+                                                onKeyDown={(e) => {
+                                                    // Разрешаем только цифры, точку, Backspace, Delete, Tab, Arrow keys
+                                                    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '.'];
+                                                    if (!allowedKeys.includes(e.key) && !/[0-9]/.test(e.key)) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                             />
+                                            {passingScoreError ? (
+                                                <Form.Control.Feedback type="invalid">
+                                                    {passingScoreError}
+                                                </Form.Control.Feedback>
+                                            ) : (
+                                                <Form.Text className="text-muted">
+                                                    Значение от 0 до 100 (максимум 5 символов)
+                                                </Form.Text>
+                                            )}
                                         </Form.Group>
                                     </Col>
                                     <Col md={6}>
@@ -288,9 +491,31 @@ const AdmissionConditionEditPage = () => {
                                             <Form.Control
                                                 type="number"
                                                 value={formData.budgetPlaces || ''}
-                                                onChange={(e) => handleInputChange('budgetPlaces', e.target.value ? parseInt(e.target.value) : undefined)}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    handleInputChange('budgetPlaces', value ? parseInt(value) : undefined);
+                                                }}
                                                 placeholder="Например: 25"
+                                                min={0}
+                                                max={500}
+                                                isInvalid={!!budgetPlacesError}
+                                                onKeyDown={(e) => {
+                                                    // Разрешаем только цифры, Backspace, Delete, Tab, Arrow keys
+                                                    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                                                    if (!allowedKeys.includes(e.key) && !/[0-9]/.test(e.key)) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                             />
+                                            {budgetPlacesError ? (
+                                                <Form.Control.Feedback type="invalid">
+                                                    {budgetPlacesError}
+                                                </Form.Control.Feedback>
+                                            ) : (
+                                                <Form.Text className="text-muted">
+                                                    От 0 до 500
+                                                </Form.Text>
+                                            )}
                                         </Form.Group>
                                     </Col>
                                     <Col md={4}>
@@ -299,9 +524,31 @@ const AdmissionConditionEditPage = () => {
                                             <Form.Control
                                                 type="number"
                                                 value={formData.targetedPlaces || ''}
-                                                onChange={(e) => handleInputChange('targetedPlaces', e.target.value ? parseInt(e.target.value) : undefined)}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    handleInputChange('targetedPlaces', value ? parseInt(value) : undefined);
+                                                }}
                                                 placeholder="Например: 5"
+                                                min={0}
+                                                max={500}
+                                                isInvalid={!!targetedPlacesError}
+                                                onKeyDown={(e) => {
+                                                    // Разрешаем только цифры, Backspace, Delete, Tab, Arrow keys
+                                                    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                                                    if (!allowedKeys.includes(e.key) && !/[0-9]/.test(e.key)) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                             />
+                                            {targetedPlacesError ? (
+                                                <Form.Control.Feedback type="invalid">
+                                                    {targetedPlacesError}
+                                                </Form.Control.Feedback>
+                                            ) : (
+                                                <Form.Text className="text-muted">
+                                                    От 0 до 500
+                                                </Form.Text>
+                                            )}
                                         </Form.Group>
                                     </Col>
                                     <Col md={4}>
@@ -310,9 +557,31 @@ const AdmissionConditionEditPage = () => {
                                             <Form.Control
                                                 type="number"
                                                 value={formData.paidPlaces || ''}
-                                                onChange={(e) => handleInputChange('paidPlaces', e.target.value ? parseInt(e.target.value) : undefined)}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    handleInputChange('paidPlaces', value ? parseInt(value) : undefined);
+                                                }}
                                                 placeholder="Например: 50"
+                                                min={0}
+                                                max={500}
+                                                isInvalid={!!paidPlacesError}
+                                                onKeyDown={(e) => {
+                                                    // Разрешаем только цифры, Backspace, Delete, Tab, Arrow keys
+                                                    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                                                    if (!allowedKeys.includes(e.key) && !/[0-9]/.test(e.key)) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                             />
+                                            {paidPlacesError ? (
+                                                <Form.Control.Feedback type="invalid">
+                                                    {paidPlacesError}
+                                                </Form.Control.Feedback>
+                                            ) : (
+                                                <Form.Text className="text-muted">
+                                                    От 0 до 500
+                                                </Form.Text>
+                                            )}
                                         </Form.Group>
                                     </Col>
                                 </Row>
@@ -331,7 +600,7 @@ const AdmissionConditionEditPage = () => {
                                             <Button
                                                 variant="primary"
                                                 onClick={handleSave}
-                                                disabled={saving}
+                                                disabled={saving || !!yearError || !!passingScoreError || !!budgetPlacesError || !!targetedPlacesError || !!paidPlacesError}
                                             >
                                                 {saving ? (
                                                     <>
@@ -372,18 +641,6 @@ const AdmissionConditionEditPage = () => {
                             admissionConditionId={parseInt(conditionId)}
                             year={formData.year}
                         />
-                    </Tab>
-                )}
-
-                {!isEditMode && (
-                    <Tab eventKey="subjects" title="Предметы" disabled>
-                        <Card>
-                            <Card.Body>
-                                <Alert variant="info">
-                                    Сначала необходимо сохранить условия поступления, затем можно будет добавить предметы.
-                                </Alert>
-                            </Card.Body>
-                        </Card>
                     </Tab>
                 )}
             </Tabs>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Container, Card, Form, Row, Col, Button, Alert, Spinner, Tab, Tabs, Modal } from 'react-bootstrap';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { createProgram, updateProgram, getProgramById } from '../api/programApi';
 import { getFacultiesByUniversity } from '../api/facultyApi';
@@ -14,6 +14,7 @@ import AdmissionConditionCard from '../components/AdmissionConditionCard';
 const ProgramEditPage = () => {
     const navigate = useNavigate();
     const { programId } = useParams<{ programId?: string }>();
+    const [searchParams] = useSearchParams();
     const authContext = useContext(AuthContext);
     const user = authContext?.user;
 
@@ -62,6 +63,14 @@ const ProgramEditPage = () => {
     });
 
     const universityId = user?.universityIds?.[0];
+
+    // Устанавливаем активную вкладку из параметров URL
+    useEffect(() => {
+        const tabParam = searchParams.get('tab');
+        if (tabParam && ['info', 'admission', 'disciplines'].includes(tabParam)) {
+            setActiveTab(tabParam);
+        }
+    }, [searchParams]);
 
     // Загружаем факультеты при монтировании
     useEffect(() => {
@@ -170,19 +179,10 @@ const ProgramEditPage = () => {
     const handleInputChange = (field: keyof ProgramRequest, value: string | number | boolean | undefined) => {
         setSaveError(null);
 
-        // Если изменился факультет, сбрасываем специальность
-        if (field === 'facultyId') {
-            setFormData(prev => ({
-                ...prev,
-                facultyId: value as number,
-                specialtyId: 0
-            }));
-        } else {
-            setFormData(prev => ({
-                ...prev,
-                [field]: value
-            }));
-        }
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
     };
 
     // Валидация формы
@@ -227,8 +227,8 @@ const ProgramEditPage = () => {
                 await createProgram(requestData);
             }
 
-            // Перенаправляем обратно на страницу администрирования университета
-            navigate('/university-admin');
+            // Перенаправляем обратно на страницу администрирования университета на вкладку "Программы"
+            navigate('/university-admin?tab=programs');
         } catch (err: any) {
             console.error('Ошибка сохранения программы:', err);
 
@@ -249,7 +249,7 @@ const ProgramEditPage = () => {
     };
 
     const handleCancel = () => {
-        navigate('/university-admin');
+        navigate('/university-admin?tab=programs');
     };
 
     const handleEditCondition = (conditionId: number) => {
@@ -587,6 +587,7 @@ const ProgramEditPage = () => {
                                                 value={formData.duration}
                                                 onChange={(e) => handleInputChange('duration', e.target.value)}
                                                 placeholder="Например: 4 года, 2 года"
+                                                maxLength={80}
                                             />
                                         </Form.Group>
                                     </Col>
@@ -602,6 +603,7 @@ const ProgramEditPage = () => {
                                                 value={formData.teachingLanguage}
                                                 onChange={(e) => handleInputChange('teachingLanguage', e.target.value)}
                                                 placeholder="Например: Русский, Английский"
+                                                maxLength={80}
                                             />
                                         </Form.Group>
                                     </Col>
