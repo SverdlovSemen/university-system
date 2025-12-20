@@ -2,8 +2,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Container, Card, Form, Row, Col, Button, Alert, Spinner } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { createFaculty, updateFaculty, getFacultyById } from '../api/facultyApi';
-import { FacultyRequest } from '../types';
+import { createFaculty, updateFaculty, getFacultyById, getFacultiesByUniversity } from '../api/facultyApi';
+import { FacultyRequest, FacultyResponse } from '../types';
 
 const FacultyEditPage = () => {
     const navigate = useNavigate();
@@ -17,6 +17,7 @@ const FacultyEditPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
+    const [existingFaculties, setExistingFaculties] = useState<FacultyResponse[]>([]);
 
     const [formData, setFormData] = useState<FacultyRequest>({
         fullName: '',
@@ -69,6 +70,26 @@ const FacultyEditPage = () => {
         }
     }, [isEditMode, facultyId, user]);
 
+    // Загружаем все факультеты университета для проверки уникальности
+    useEffect(() => {
+        const loadExistingFaculties = async () => {
+            const universityId = user?.universityIds?.[0];
+            if (universityId) {
+                try {
+                    const faculties = await getFacultiesByUniversity(universityId);
+                    setExistingFaculties(faculties);
+                } catch (err) {
+                    console.error('Ошибка загрузки списка факультетов:', err);
+                    // Не показываем ошибку пользователю, т.к. это не критично
+                }
+            }
+        };
+
+        if (user) {
+            loadExistingFaculties();
+        }
+    }, [user]);
+
     // Обработчик изменения полей формы
     const handleInputChange = (field: keyof FacultyRequest, value: string | number) => {
         setFormData(prev => ({
@@ -97,6 +118,16 @@ const FacultyEditPage = () => {
         } else if (formData.fullName.trim().length > 100) {
             errors.fullName = 'Полное название не должно превышать 100 символов';
             hasErrors = true;
+        } else {
+            // Проверка на уникальность полного названия
+            const duplicateByFullName = existingFaculties.find(f =>
+                f.fullName.toLowerCase() === formData.fullName.trim().toLowerCase() &&
+                (!isEditMode || f.id !== parseInt(facultyId!))
+            );
+            if (duplicateByFullName) {
+                errors.fullName = 'Факультет с таким полным названием уже существует в этом университете';
+                hasErrors = true;
+            }
         }
 
         // Валидация аббревиатуры (обязательное поле)
@@ -106,6 +137,16 @@ const FacultyEditPage = () => {
         } else if (formData.abbreviation.trim().length > 20) {
             errors.abbreviation = 'Аббревиатура не должна превышать 20 символов';
             hasErrors = true;
+        } else {
+            // Проверка на уникальность аббревиатуры
+            const duplicateByAbbreviation = existingFaculties.find(f =>
+                f.abbreviation?.toLowerCase() === formData.abbreviation?.trim().toLowerCase() &&
+                (!isEditMode || f.id !== parseInt(facultyId!))
+            );
+            if (duplicateByAbbreviation) {
+                errors.abbreviation = 'Факультет с такой аббревиатурой уже существует в этом университете';
+                hasErrors = true;
+            }
         }
 
         // Валидация email если указан
