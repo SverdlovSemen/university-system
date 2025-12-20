@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Container, Tab, Tabs, Card, Form, Row, Col, Spinner, Alert, Button, Table, Modal } from 'react-bootstrap';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { getUniversityById, updateUniversity } from '../api/universityApi';
 import { fetchAllCities } from '../api/cityApi';
@@ -44,6 +45,7 @@ const UniversityAdminPage = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showTransferModal, setShowTransferModal] = useState(false);
     const [facultyToDelete, setFacultyToDelete] = useState<FacultyResponse | null>(null);
+    const [targetFacultyId, setTargetFacultyId] = useState<number | null>(null);
     const [deletingFaculty, setDeletingFaculty] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -114,25 +116,26 @@ const UniversityAdminPage = () => {
         }
     }, [user]);
 
+    // Функция загрузки факультетов
+    const loadFaculties = async (universityId: number) => {
+        try {
+            setFacultiesLoading(true);
+            setFacultiesError(null);
+            const facultiesData = await getFacultiesByUniversity(universityId);
+            setFaculties(facultiesData);
+        } catch (err) {
+            console.error('Ошибка загрузки факультетов:', err);
+            setFacultiesError('Не удалось загрузить список факультетов');
+        } finally {
+            setFacultiesLoading(false);
+        }
+    };
+
     // Загружаем факультеты при переключении на вкладку "Факультеты"
     useEffect(() => {
-        const loadFaculties = async () => {
-            if (activeTab === 'faculties' && university?.id) {
-                try {
-                    setFacultiesLoading(true);
-                    setFacultiesError(null);
-                    const facultiesData = await getFacultiesByUniversity(university.id);
-                    setFaculties(facultiesData);
-                } catch (err) {
-                    console.error('Ошибка загрузки факультетов:', err);
-                    setFacultiesError('Не удалось загрузить список факультетов');
-                } finally {
-                    setFacultiesLoading(false);
-                }
-            }
-        };
-
-        loadFaculties();
+        if (activeTab === 'faculties' && university?.id) {
+            loadFaculties(university.id);
+        }
     }, [activeTab, university?.id]);
 
     // Загружаем программы при переключении на вкладку "Программы"
@@ -388,14 +391,13 @@ const UniversityAdminPage = () => {
             // Удаляем факультет (каскадно удалятся все программы и связанные данные)
             await deleteFaculty(facultyToDelete.id);
 
-            // Обновляем список факультетов
-            if (university?.id) {
-                const updatedFaculties = await getFacultiesByUniversity(university.id);
-                setFaculties(updatedFaculties);
-            }
-
             // Закрываем модальное окно
             handleCloseDeleteModal();
+
+            // Обновляем список факультетов
+            if (university?.id) {
+                await loadFaculties(university.id);
+            }
 
             // Можно показать уведомление об успешном удалении
             alert(`Факультет "${facultyToDelete.fullName}" успешно удален вместе со всеми программами`);
@@ -424,6 +426,11 @@ const UniversityAdminPage = () => {
     };
 
     const handleOpenTransferModal = () => {
+        // Проверяем, есть ли другие факультеты кроме удаляемого
+        if (faculties.length <= 1) {
+            setDeleteError('В вашем университете больше нет факультетов');
+            return;
+        }
         setShowDeleteModal(false);
         setShowTransferModal(true);
     };
@@ -431,7 +438,73 @@ const UniversityAdminPage = () => {
     const handleCloseTransferModal = () => {
         setShowTransferModal(false);
         setFacultyToDelete(null);
+        setTargetFacultyId(null);
         setDeleteError(null);
+    };
+
+    const handleTransferAndDeleteFaculty = async () => {
+        if (!facultyToDelete || !targetFacultyId) {
+            setDeleteError('Выберите факультет для переноса программ');
+            return;
+        }
+
+        try {
+            setDeletingFaculty(true);
+            setDeleteError(null);
+
+            console.log('Отправка запроса на перенос программ:', {
+                sourceFacultyId: facultyToDelete.id,
+                targetFacultyId: targetFacultyId
+            });
+
+            // Вызываем API для переноса программ и удаления факультета
+            await axios.post('/api/faculties/transfer-and-delete', {
+                sourceFacultyId: facultyToDelete.id,
+                targetFacultyId: targetFacultyId
+            });
+
+            // Закрываем модальное окно
+            handleCloseTransferModal();
+
+            // Перезагружаем список факультетов
+            if (university?.id) {
+                loadFaculties(university.id);
+            }
+
+            alert(`Программы факультета "${facultyToDelete.fullName}" успешно перенесены, факультет удален`);
+
+        } catch (err: any) {
+            console.error('Ошибка переноса программ и удаления факультета:', err);
+            console.error('Детали ответа:', err.response);
+            console.error('Данные ошибки:', err.response?.data);
+
+            let errorMessage = 'Не удалось перенести программы и удалить факультет';
+
+            if (err.response?.status === 403) {
+                errorMessage = 'Доступ запрещен. У вас недостаточно прав для выполнения этой операции.';
+            } else if (err.response?.status === 400) {
+                // Специальная обработка для 400 ошибки
+                if (err.response?.data?.message) {
+                    errorMessage = err.response.data.message;
+                } else if (typeof err.response?.data === 'string') {
+                    errorMessage = err.response.data;
+                } else {
+                    errorMessage = 'Некорректный запрос. Проверьте выбранные данные.';
+                }
+            } else if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            } else if (err.response?.data) {
+                errorMessage = typeof err.response.data === 'string'
+                    ? err.response.data
+                    : JSON.stringify(err.response.data);
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+
+            setDeleteError(errorMessage);
+        } finally {
+            setDeletingFaculty(false);
+        }
     };
 
     return (
@@ -951,15 +1024,58 @@ const UniversityAdminPage = () => {
                     {facultyToDelete && (
                         <>
                             <p>Перенос программ факультета <strong>"{facultyToDelete.fullName}"</strong> на другой факультет.</p>
-                            <Alert variant="info">
-                                Функционал в разработке...
-                            </Alert>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label>Выберите факультет для переноса программ</Form.Label>
+                                <Form.Select
+                                    value={targetFacultyId || ''}
+                                    onChange={(e) => setTargetFacultyId(e.target.value ? Number(e.target.value) : null)}
+                                    disabled={deletingFaculty}
+                                >
+                                    <option value="">-- Выберите факультет --</option>
+                                    {faculties
+                                        .filter(f => f.id !== facultyToDelete.id)
+                                        .map(faculty => (
+                                            <option key={faculty.id} value={faculty.id}>
+                                                {faculty.fullName} ({faculty.abbreviation})
+                                            </option>
+                                        ))
+                                    }
+                                </Form.Select>
+                            </Form.Group>
+
+                            {deleteError && (
+                                <Alert variant="danger" className="mt-3">
+                                    {deleteError}
+                                </Alert>
+                            )}
                         </>
                     )}
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={handleCloseTransferModal}>
+                    <Button variant="secondary" onClick={handleCloseTransferModal} disabled={deletingFaculty}>
                         Отмена
+                    </Button>
+                    <Button
+                        variant="danger"
+                        onClick={handleTransferAndDeleteFaculty}
+                        disabled={deletingFaculty || !targetFacultyId}
+                    >
+                        {deletingFaculty ? (
+                            <>
+                                <Spinner
+                                    as="span"
+                                    animation="border"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                    className="me-2"
+                                />
+                                Выполнение...
+                            </>
+                        ) : (
+                            'Перенести программы и удалить факультет'
+                        )}
                     </Button>
                 </Modal.Footer>
             </Modal>

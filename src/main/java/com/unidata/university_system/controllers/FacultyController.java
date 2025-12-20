@@ -53,6 +53,19 @@ public class FacultyController {
         return ResponseEntity.notFound().build();
     }
 
+    @PostMapping("/transfer-and-delete")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR','UNIVERSITY_ADMIN')")
+    public ResponseEntity<?> transferProgramsAndDeleteFaculty(@Valid @RequestBody TransferProgramsRequest request) {
+        try {
+            facultyService.transferProgramsAndDeleteFaculty(request.getSourceFacultyId(), request.getTargetFacultyId());
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Внутренняя ошибка сервера: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/import")
     public ResponseEntity<List<Faculty>> importFaculties(@RequestParam("file") MultipartFile file) {
         try {

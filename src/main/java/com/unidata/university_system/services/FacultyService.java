@@ -141,4 +141,40 @@ public class FacultyService {
         }
         return savedFaculties;
     }
+
+    @Transactional
+    public void transferProgramsAndDeleteFaculty(Long sourceFacultyId, Long targetFacultyId) {
+        System.out.println("transferProgramsAndDeleteFaculty вызван с параметрами:");
+        System.out.println("sourceFacultyId: " + sourceFacultyId);
+        System.out.println("targetFacultyId: " + targetFacultyId);
+
+        // Проверяем существование исходного факультета
+        Faculty sourceFaculty = facultyRepository.findById(sourceFacultyId)
+                .orElseThrow(() -> new IllegalArgumentException("Факультет с ID " + sourceFacultyId + " не найден"));
+
+        System.out.println("Исходный факультет найден: " + sourceFaculty.getFullName());
+
+        // Проверяем существование целевого факультета
+        Faculty targetFaculty = facultyRepository.findById(targetFacultyId)
+                .orElseThrow(() -> new IllegalArgumentException("Факультет с ID " + targetFacultyId + " не найден"));
+
+        System.out.println("Целевой факультет найден: " + targetFaculty.getFullName());
+
+        // Проверяем права доступа
+        checkCanModifyUniversity(sourceFaculty.getUniversity().getId());
+
+        System.out.println("Права доступа проверены успешно");
+
+        // Вызываем процедуру PostgreSQL для переноса программ и удаления факультета
+        // Транзакцией управляет Spring (@Transactional)
+        try {
+            System.out.println("Вызов процедуры safe_move_programs_and_delete_faculty...");
+            facultyRepository.safeMoveAndDeleteFaculty(sourceFacultyId, targetFacultyId, true);
+            System.out.println("Процедура выполнена успешно");
+        } catch (Exception e) {
+            System.err.println("Ошибка при вызове процедуры: " + e.getMessage());
+            e.printStackTrace();
+            throw new IllegalArgumentException("Ошибка при переносе программ: " + e.getMessage(), e);
+        }
+    }
 }
