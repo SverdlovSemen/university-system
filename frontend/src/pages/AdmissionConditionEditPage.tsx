@@ -66,7 +66,7 @@ const AdmissionConditionEditPage = () => {
                     const condition = await getAdmissionConditionById(parseInt(programId), parseInt(conditionId));
 
                     setFormData({
-                        year: condition.year,
+                        year: condition.year, // при редактировании заполняем
                         passingScore: condition.passingScore,
                         budgetPlaces: condition.budgetPlaces,
                         targetedPlaces: condition.targetedPlaces,
@@ -373,11 +373,26 @@ const AdmissionConditionEditPage = () => {
                                             <Form.Label><strong>Год *</strong></Form.Label>
                                             <Form.Control
                                                 type="number"
-                                                value={formData.year}
-                                                onChange={(e) => handleInputChange('year', parseInt(e.target.value) || new Date().getFullYear())}
+                                                value={formData.year ?? ''} // показываем пустую строку, если год не задан
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    // Разрешаем пустое значение
+                                                    if (value === '') {
+                                                        handleInputChange('year', undefined);
+                                                        return;
+                                                    }
+                                                    // Ограничиваем ввод максимум 5 символами
+                                                    if (value.length <= 5) {
+                                                        const parsedYear = parseInt(value);
+                                                        if (!isNaN(parsedYear)) {
+                                                            handleInputChange('year', parsedYear);
+                                                        }
+                                                    }
+                                                }}
                                                 required
                                                 min={2009}
                                                 max={new Date().getFullYear()}
+                                                maxLength={5}
                                                 isInvalid={!!yearError}
                                                 onKeyDown={(e) => {
                                                     // Разрешаем только цифры, Backspace, Delete, Tab, Arrow keys
@@ -393,7 +408,7 @@ const AdmissionConditionEditPage = () => {
                                                 </Form.Control.Feedback>
                                             ) : (
                                                 <Form.Text className="text-muted">
-                                                    Укажите год набора (от 2009 до {new Date().getFullYear()})
+                                                    Укажите год набора (от 2009 до {new Date().getFullYear()}), максимум 5 символов
                                                 </Form.Text>
                                             )}
                                         </Form.Group>
@@ -403,12 +418,13 @@ const AdmissionConditionEditPage = () => {
                                             <Form.Label><strong>Стоимость поступления</strong></Form.Label>
                                             <Form.Control
                                                 type="number"
+                                                min={0}
                                                 value={formData.admissionFee || ''}
                                                 onChange={(e) => {
                                                     const value = e.target.value;
                                                     // Ограничиваем длину до 10 символов
                                                     if (value.length <= 10) {
-                                                        handleInputChange('admissionFee', value ? parseFloat(value) : undefined);
+                                                        handleInputChange('admissionFee', value ? Math.max(0, parseFloat(value)) : undefined);
                                                     }
                                                 }}
                                                 placeholder="Например: 250000"
@@ -418,6 +434,15 @@ const AdmissionConditionEditPage = () => {
                                                     const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
                                                     if (!allowedKeys.includes(e.key) && !/[0-9]/.test(e.key)) {
                                                         e.preventDefault();
+                                                    }
+                                                }}
+                                                onWheel={e => {
+                                                    const target = e.target as HTMLInputElement;
+                                                    if (target.value && parseFloat(target.value) <= 0 && e.deltaY < 0) {
+                                                        // Не уменьшаем ниже 0
+                                                        e.preventDefault();
+                                                        target.value = '0';
+                                                        handleInputChange('admissionFee', 0);
                                                     }
                                                 }}
                                             />
@@ -493,11 +518,16 @@ const AdmissionConditionEditPage = () => {
                                                 value={formData.budgetPlaces || ''}
                                                 onChange={(e) => {
                                                     const value = e.target.value;
-                                                    handleInputChange('budgetPlaces', value ? parseInt(value) : undefined);
+                                                    // Ограничиваем ввод максимум 5 символами
+                                                    if (value.length <= 5) {
+                                                        handleInputChange('budgetPlaces', value ? parseInt(value) : undefined);
+                                                    }
                                                 }}
                                                 placeholder="Например: 25"
                                                 min={0}
                                                 max={500}
+                                                // maxLength для type="number" может игнорироваться браузером, но оставим для единообразия
+                                                maxLength={5}
                                                 isInvalid={!!budgetPlacesError}
                                                 onKeyDown={(e) => {
                                                     // Разрешаем только цифры, Backspace, Delete, Tab, Arrow keys
@@ -513,7 +543,7 @@ const AdmissionConditionEditPage = () => {
                                                 </Form.Control.Feedback>
                                             ) : (
                                                 <Form.Text className="text-muted">
-                                                    От 0 до 500
+                                                    От 0 до 500 (максимум 5 символов)
                                                 </Form.Text>
                                             )}
                                         </Form.Group>
@@ -526,11 +556,15 @@ const AdmissionConditionEditPage = () => {
                                                 value={formData.targetedPlaces || ''}
                                                 onChange={(e) => {
                                                     const value = e.target.value;
-                                                    handleInputChange('targetedPlaces', value ? parseInt(value) : undefined);
+                                                    // Ограничиваем ввод максимум 5 символами
+                                                    if (value.length <= 5) {
+                                                        handleInputChange('targetedPlaces', value ? parseInt(value) : undefined);
+                                                    }
                                                 }}
                                                 placeholder="Например: 5"
                                                 min={0}
                                                 max={500}
+                                                maxLength={5}
                                                 isInvalid={!!targetedPlacesError}
                                                 onKeyDown={(e) => {
                                                     // Разрешаем только цифры, Backspace, Delete, Tab, Arrow keys
@@ -538,6 +572,7 @@ const AdmissionConditionEditPage = () => {
                                                     if (!allowedKeys.includes(e.key) && !/[0-9]/.test(e.key)) {
                                                         e.preventDefault();
                                                     }
+
                                                 }}
                                             />
                                             {targetedPlacesError ? (
@@ -546,7 +581,7 @@ const AdmissionConditionEditPage = () => {
                                                 </Form.Control.Feedback>
                                             ) : (
                                                 <Form.Text className="text-muted">
-                                                    От 0 до 500
+                                                    От 0 до 500 (максимум 5 символов)
                                                 </Form.Text>
                                             )}
                                         </Form.Group>
@@ -559,11 +594,15 @@ const AdmissionConditionEditPage = () => {
                                                 value={formData.paidPlaces || ''}
                                                 onChange={(e) => {
                                                     const value = e.target.value;
-                                                    handleInputChange('paidPlaces', value ? parseInt(value) : undefined);
+                                                    // Ограничиваем ввод максимум 5 символами
+                                                    if (value.length <= 5) {
+                                                        handleInputChange('paidPlaces', value ? parseInt(value) : undefined);
+                                                    }
                                                 }}
                                                 placeholder="Например: 50"
                                                 min={0}
                                                 max={500}
+                                                maxLength={5}
                                                 isInvalid={!!paidPlacesError}
                                                 onKeyDown={(e) => {
                                                     // Разрешаем только цифры, Backspace, Delete, Tab, Arrow keys
@@ -579,7 +618,7 @@ const AdmissionConditionEditPage = () => {
                                                 </Form.Control.Feedback>
                                             ) : (
                                                 <Form.Text className="text-muted">
-                                                    От 0 до 500
+                                                    От 0 до 500 (максимум 5 символов)
                                                 </Form.Text>
                                             )}
                                         </Form.Group>

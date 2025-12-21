@@ -5,9 +5,10 @@ import { AdmissionConditionResponse } from '../types';
 interface AdmissionConditionCardProps {
     condition: AdmissionConditionResponse;
     onEdit?: (id: number) => void;
+    onDelete?: (id: number) => void;
 }
 
-const AdmissionConditionCard: React.FC<AdmissionConditionCardProps> = ({ condition, onEdit }) => {
+const AdmissionConditionCard: React.FC<AdmissionConditionCardProps> = ({ condition, onEdit, onDelete }) => {
     return (
         <Card className="mb-3 shadow-sm">
             <Card.Header className="bg-primary text-white">
@@ -16,12 +17,20 @@ const AdmissionConditionCard: React.FC<AdmissionConditionCardProps> = ({ conditi
                         <i className="bi bi-calendar-check me-2"></i>
                         Условия поступления {condition.year} года
                     </h5>
-                    {onEdit && (
-                        <Button variant="light" size="sm" onClick={() => onEdit(condition.id)}>
-                            <i className="bi bi-pencil me-2"></i>
-                            Редактировать
-                        </Button>
-                    )}
+                    <div className="d-flex gap-2">
+                        {onEdit && (
+                            <Button variant="light" size="sm" onClick={() => onEdit(condition.id)}>
+                                <i className="bi bi-pencil me-2"></i>
+                                Редактировать
+                            </Button>
+                        )}
+                        {onDelete && (
+                            <Button variant="danger" size="sm" onClick={() => onDelete(condition.id)}>
+                                <i className="bi bi-trash me-2"></i>
+                                Удалить
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </Card.Header>
             <Card.Body>
@@ -95,4 +104,3 @@ const AdmissionConditionCard: React.FC<AdmissionConditionCardProps> = ({ conditi
 };
 
 export default AdmissionConditionCard;
-

@@ -6,7 +6,7 @@ import { AuthContext } from '../context/AuthContext';
 import { getUniversityById, updateUniversity } from '../api/universityApi';
 import { fetchAllCities } from '../api/cityApi';
 import { getFacultiesByUniversity, deleteFaculty } from '../api/facultyApi';
-import { fetchProgramDetailsByUniversity } from '../api/programApi';
+import { fetchProgramDetailsByUniversity, deleteProgram } from '../api/programApi';
 import { UniversityResponse, CityResponse, UniversityRequest, FacultyResponse, ProgramResponse } from '../types';
 
 
@@ -48,6 +48,12 @@ const UniversityAdminPage = () => {
     const [targetFacultyId, setTargetFacultyId] = useState<number | null>(null);
     const [deletingFaculty, setDeletingFaculty] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    // Состояния для модального окна удаления программы
+    const [showDeleteProgramModal, setShowDeleteProgramModal] = useState(false);
+    const [programToDelete, setProgramToDelete] = useState<ProgramResponse | null>(null);
+    const [deletingProgram, setDeletingProgram] = useState(false);
+    const [deleteProgramError, setDeleteProgramError] = useState<string | null>(null);
 
 
 
@@ -138,25 +144,26 @@ const UniversityAdminPage = () => {
         }
     }, [activeTab, university?.id]);
 
+    // Функция загрузки программ
+    const loadPrograms = async (universityId: number) => {
+        try {
+            setProgramsLoading(true);
+            setProgramsError(null);
+            const programsData = await fetchProgramDetailsByUniversity(universityId);
+            setPrograms(programsData);
+        } catch (err) {
+            console.error('Ошибка загрузки программ:', err);
+            setProgramsError('Не удалось загрузить список программ');
+        } finally {
+            setProgramsLoading(false);
+        }
+    };
+
     // Загружаем программы при переключении на вкладку "Программы"
     useEffect(() => {
-        const loadPrograms = async () => {
-            if (activeTab === 'programs' && university?.id) {
-                try {
-                    setProgramsLoading(true);
-                    setProgramsError(null);
-                    const programsData = await fetchProgramDetailsByUniversity(university.id);
-                    setPrograms(programsData);
-                } catch (err) {
-                    console.error('Ошибка загрузки программ:', err);
-                    setProgramsError('Не удалось загрузить список программ');
-                } finally {
-                    setProgramsLoading(false);
-                }
-            }
-        };
-
-        loadPrograms();
+        if (activeTab === 'programs' && university?.id) {
+            loadPrograms(university.id);
+        }
     }, [activeTab, university?.id]);
 
 
@@ -504,6 +511,60 @@ const UniversityAdminPage = () => {
             setDeleteError(errorMessage);
         } finally {
             setDeletingFaculty(false);
+        }
+    };
+
+    // Обработчики модального окна удаления программы
+    const handleOpenDeleteProgramModal = (program: ProgramResponse) => {
+        setProgramToDelete(program);
+        setShowDeleteProgramModal(true);
+    };
+
+    const handleCloseDeleteProgramModal = () => {
+        setShowDeleteProgramModal(false);
+        setProgramToDelete(null);
+        setDeleteProgramError(null);
+    };
+
+    const handleDeleteProgram = async () => {
+        if (!programToDelete) return;
+
+        try {
+            setDeletingProgram(true);
+            setDeleteProgramError(null);
+
+            // Удаляем программу
+            await deleteProgram(programToDelete.id);
+
+            // Закрываем модальное окно
+            handleCloseDeleteProgramModal();
+
+            // Обновляем список программ
+            if (university?.id) {
+                await loadPrograms(university.id);
+            }
+
+
+        } catch (err: any) {
+            console.error('Ошибка удаления программы:', err);
+
+            let errorMessage = 'Не удалось удалить программу';
+
+            if (err.response?.status === 403) {
+                errorMessage = 'Доступ запрещен. У вас недостаточно прав для удаления этой программы.';
+            } else if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            } else if (err.response?.data) {
+                errorMessage = typeof err.response.data === 'string'
+                    ? err.response.data
+                    : JSON.stringify(err.response.data);
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+
+            setDeleteProgramError(errorMessage);
+        } finally {
+            setDeletingProgram(false);
         }
     };
 
@@ -918,13 +979,22 @@ const UniversityAdminPage = () => {
                                                             </span>
                                                         </td>
                                                         <td>
-                                                            <Button
-                                                                variant="primary"
-                                                                size="sm"
-                                                                onClick={() => navigate(`/program/edit/${program.id}`)}
-                                                            >
-                                                                Редактировать
-                                                            </Button>
+                                                            <div className="d-flex gap-2">
+                                                                <Button
+                                                                    variant="primary"
+                                                                    size="sm"
+                                                                    onClick={() => navigate(`/program/edit/${program.id}`)}
+                                                                >
+                                                                    Редактировать
+                                                                </Button>
+                                                                <Button
+                                                                    variant="danger"
+                                                                    size="sm"
+                                                                    onClick={() => handleOpenDeleteProgramModal(program)}
+                                                                >
+                                                                    Удалить
+                                                                </Button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -1075,6 +1145,52 @@ const UniversityAdminPage = () => {
                             </>
                         ) : (
                             'Перенести программы и удалить факультет'
+                        )}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Модальное окно подтверждения удаления программы */}
+            <Modal show={showDeleteProgramModal} onHide={handleCloseDeleteProgramModal} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Удаление программы</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {programToDelete && (
+                        <>
+                            <p>
+                                Вы уверены, что хотите удалить программу <strong>"{programToDelete.specialty.name}"</strong>?
+                            </p>
+                            <Alert variant="warning">
+                                <strong>Внимание!</strong> Это действие нельзя отменить. Будут удалены все связанные данные программы.
+                            </Alert>
+                            {deleteProgramError && (
+                                <Alert variant="danger" className="mt-3">
+                                    {deleteProgramError}
+                                </Alert>
+                            )}
+                        </>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleCloseDeleteProgramModal} disabled={deletingProgram}>
+                        Отмена
+                    </Button>
+                    <Button variant="danger" onClick={handleDeleteProgram} disabled={deletingProgram}>
+                        {deletingProgram ? (
+                            <>
+                                <Spinner
+                                    as="span"
+                                    animation="border"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                    className="me-2"
+                                />
+                                Удаление...
+                            </>
+                        ) : (
+                            'Удалить программу'
                         )}
                     </Button>
                 </Modal.Footer>

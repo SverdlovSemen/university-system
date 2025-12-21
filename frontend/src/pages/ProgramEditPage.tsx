@@ -298,6 +298,12 @@ const ProgramEditPage = () => {
             return;
         }
 
+        // Проверяем диапазон года
+        if (copyTargetYear < 2009 || copyTargetYear > 2025) {
+            setCopyError('Год должен быть в диапазоне от 2009 до 2025');
+            return;
+        }
+
         // Проверяем, что выбранный целевой год ещё не используется
         const targetExists = programData?.admissionConditions?.some((c: any) => c.year === copyTargetYear);
         if (targetExists) {
@@ -449,6 +455,38 @@ const ProgramEditPage = () => {
         } finally {
             setSavingDiscipline(false);
         }
+    };
+
+    const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+    const [selectedConditionId, setSelectedConditionId] = React.useState<number | null>(null);
+
+    const handleRequestDeleteCondition = (conditionId: number) => {
+        setSelectedConditionId(conditionId);
+        setShowDeleteModal(true);
+    };
+
+    const handleConfirmDeleteCondition = async () => {
+        if (selectedConditionId !== null && programId) {
+            try {
+                setDeletingConditionId(selectedConditionId);
+                setShowDeleteModal(false);
+                await deleteAdmissionCondition(parseInt(programId), selectedConditionId);
+                // Перезагружаем данные программы
+                const program = await getProgramById(parseInt(programId));
+                setProgramData(program);
+            } catch (err) {
+                console.error('Ошибка удаления условия поступления:', err);
+                alert('Не удалось удалить условие поступления');
+            } finally {
+                setDeletingConditionId(null);
+                setSelectedConditionId(null);
+            }
+        }
+    };
+
+    const handleCancelDeleteCondition = () => {
+        setShowDeleteModal(false);
+        setSelectedConditionId(null);
     };
 
     if (loading || loadingFaculties) {
@@ -699,6 +737,7 @@ const ProgramEditPage = () => {
                                         <AdmissionConditionCard
                                             condition={condition}
                                             onEdit={handleEditCondition}
+                                            onDelete={handleRequestDeleteCondition}
                                         />
                                         {deletingConditionId === condition.id && (
                                             <div className="position-absolute top-50 start-50 translate-middle">
@@ -811,10 +850,29 @@ const ProgramEditPage = () => {
                                 type="number"
                                 placeholder="Например: 2025"
                                 value={copyTargetYear ?? ''}
-                                onChange={(e) => setCopyTargetYear(e.target.value ? parseInt(e.target.value) : null)}
+                                onChange={(e) => {
+                                    const year = e.target.value ? parseInt(e.target.value) : null;
+                                    setCopyTargetYear(year);
+                                    // Очищаем ошибку при изменении поля
+                                    setCopyError(null);
+                                }}
+                                min={2009}
+                                max={2025}
+                                isInvalid={copyTargetYear !== null && (copyTargetYear < 2009 || copyTargetYear > 2025)}
+                                onKeyDown={(e) => {
+                                    // Разрешаем только цифры, клавиши навигации и управляющие клавиши
+                                    if (!/[0-9]/.test(e.key) &&
+                                        !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+                                        e.preventDefault();
+                                    }
+                                }}
                             />
+                            <Form.Control.Feedback type="invalid">
+                                {copyTargetYear !== null && copyTargetYear < 2009 && "Год не может быть меньше 2009"}
+                                {copyTargetYear !== null && copyTargetYear > 2025 && "Год не может быть больше 2025"}
+                            </Form.Control.Feedback>
                             <Form.Text className="text-muted">
-                                Год, для которого ещё нет условий поступления.
+                                Укажите год от 2009 до 2025, для которого ещё нет условий поступления.
                             </Form.Text>
                         </Form.Group>
 
@@ -910,6 +968,24 @@ const ProgramEditPage = () => {
                         ) : (
                             selectedDiscipline ? 'Сохранить изменения' : 'Добавить'
                         )}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Модальное окно подтверждения удаления условия поступления */}
+            <Modal show={showDeleteModal} onHide={handleCancelDeleteCondition} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Подтвердите удаление</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>Вы уверены, что хотите удалить это условие поступления? Это действие необратимо.</p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleCancelDeleteCondition}>
+                        Отмена
+                    </Button>
+                    <Button variant="danger" onClick={handleConfirmDeleteCondition}>
+                        Удалить
                     </Button>
                 </Modal.Footer>
             </Modal>
