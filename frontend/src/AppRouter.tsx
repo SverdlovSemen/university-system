@@ -20,6 +20,7 @@ import UniversityAdminUsersPage from './pages/UniversityAdminUsersPage';
 import FacultyEditPage from "./pages/FacultyEditPage";
 import ProgramEditPage from "./pages/ProgramEditPage";
 import AdmissionConditionEditPage from "./pages/AdmissionConditionEditPage";
+import RoleBasedRedirect from './components/RoleBasedRedirect';
 
 const ProtectedRoute: React.FC<{
     children: React.ReactNode,
@@ -44,7 +45,11 @@ const AppRouter = () => {
     return (
         <Routes>
             {/* Основная страница - поиск университетов (доступна всем) */}
-            <Route path="/" element={<SearchPage />} />
+            <Route path="/" element={
+                <RoleBasedRedirect>
+                    <SearchPage />
+                </RoleBasedRedirect>
+            } />
 
             {/* Страница университета (доступна всем) */}
             <Route path="/university/:id" element={<UniversityPage />} />

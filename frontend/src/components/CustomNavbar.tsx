@@ -12,10 +12,31 @@ const CustomNavbar = () => {
         navigate('/');
     };
 
+    // Проверяем, является ли пользователь администратором
+    const isAdmin = hasRole('ROLE_ADMIN') || hasRole('ROLE_UNIVERSITY_ADMIN');
+
+    const handleBrandClick = (e: React.MouseEvent) => {
+        // Блокируем переход для администраторов
+        if (isAdmin) {
+            e.preventDefault();
+        }
+    };
+
     return (
         <Navbar bg="light" expand="lg" className="mb-4">
             <Container>
-                <Navbar.Brand as={Link} to="/">University System</Navbar.Brand>
+                <Navbar.Brand
+                    as={Link}
+                    to="/"
+                    onClick={handleBrandClick}
+                    style={{
+                        cursor: isAdmin ? 'not-allowed' : 'pointer',
+                        opacity: isAdmin ? 0.6 : 1,
+                        pointerEvents: isAdmin ? 'none' : 'auto'
+                    }}
+                >
+                    University System
+                </Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
                     <Nav className="me-auto">

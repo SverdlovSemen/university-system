@@ -39,6 +39,10 @@ const SearchPage = () => {
             try {
                 const regionsData = await fetchAllRegions();
                 setRegions(regionsData);
+
+                // Загружаем все университеты при первой загрузке страницы
+                const universities = await fetchUniversities();
+                setSearchResults(universities);
             } catch (error) {
                 console.error('Ошибка загрузки данных', error);
             } finally {

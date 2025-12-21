@@ -43,6 +43,9 @@ const ProgramEditPage = () => {
     });
     const [selectedDiscipline, setSelectedDiscipline] = useState<DisciplineResponse | null>(null);
     const [disciplineError, setDisciplineError] = useState<string | null>(null);
+    const [showDeleteDisciplineModal, setShowDeleteDisciplineModal] = useState(false);
+    const [disciplineToDelete, setDisciplineToDelete] = useState<DisciplineResponse | null>(null);
+    const [deletingDisciplineId, setDeletingDisciplineId] = useState<number | null>(null);
 
     // Данные для селектов
     const [faculties, setFaculties] = useState<FacultyResponse[]>([]);
@@ -335,6 +338,9 @@ const ProgramEditPage = () => {
         // режим создания
         setSelectedDiscipline(null);
         setDisciplineError(null);
+        setSemesterError(null);
+        setTotalHoursError(null);
+        setDuplicateError(null);
         setDisciplineFormData({
             name: '',
             semester: 1,
@@ -346,6 +352,9 @@ const ProgramEditPage = () => {
     const handleOpenEditDisciplineModal = (discipline: DisciplineResponse) => {
         setSelectedDiscipline(discipline);
         setDisciplineError(null);
+        setSemesterError(null);
+        setTotalHoursError(null);
+        setDuplicateError(null);
         setDisciplineFormData({
             name: discipline.name,
             semester: discipline.semester,
@@ -358,6 +367,9 @@ const ProgramEditPage = () => {
         setShowDisciplineModal(false);
         setSelectedDiscipline(null);
         setDisciplineError(null);
+        setSemesterError(null);
+        setTotalHoursError(null);
+        setDuplicateError(null);
         setDisciplineFormData({
             name: '',
             semester: 1,
@@ -367,10 +379,87 @@ const ProgramEditPage = () => {
 
     const handleDisciplineInputChange = (field: keyof DisciplineRequest, value: string | number) => {
         setDisciplineError(null);
-        setDisciplineFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+        setDisciplineFormData(prev => {
+            const updated = {
+                ...prev,
+                [field]: value
+            };
+
+            // Проверяем на дубликаты при изменении названия или семестра
+            if (field === 'name' || field === 'semester') {
+                checkDuplicateDiscipline(
+                    field === 'name' ? String(value) : updated.name,
+                    field === 'semester' ? Number(value) : updated.semester
+                );
+            }
+
+            return updated;
+        });
+    };
+
+    const [semesterError, setSemesterError] = useState<string | null>(null);
+    const [totalHoursError, setTotalHoursError] = useState<string | null>(null);
+    const [duplicateError, setDuplicateError] = useState<string | null>(null);
+
+    const checkDuplicateDiscipline = (name: string, semester: number) => {
+        const duplicateExists = disciplines.some(d => {
+            // Если редактируем, исключаем текущую дисциплину из проверки
+            if (selectedDiscipline && d.id === selectedDiscipline.id) {
+                return false;
+            }
+            // Проверяем совпадение названия (без учета регистра) и семестра
+            return d.name.trim().toLowerCase() === name.trim().toLowerCase() &&
+                   d.semester === semester;
+        });
+
+        if (duplicateExists && name.trim()) {
+            setDuplicateError(`Дисциплина "${name.trim()}" уже существует в ${semester} семестре`);
+        } else {
+            setDuplicateError(null);
+        }
+    };
+
+    const handleSemesterChange = (value: string) => {
+        // Разрешаем только цифры и ограничиваем длину
+        if (value !== '' && (!/^\d+$/.test(value) || value.length > 5)) {
+            return;
+        }
+
+        const numValue = value === '' ? 0 : parseInt(value);
+
+        if (value !== '' && numValue > 12) {
+            setSemesterError('Семестр не может быть больше 12');
+        } else if (value !== '' && numValue < 1) {
+            setSemesterError('Семестр должен быть больше 0');
+        } else {
+            setSemesterError(null);
+        }
+
+        handleDisciplineInputChange('semester', numValue);
+
+        // Проверяем на дубликаты при изменении семестра
+        if (value !== '' && numValue >= 1 && numValue <= 12) {
+            checkDuplicateDiscipline(disciplineFormData.name, numValue);
+        }
+    };
+
+    const handleTotalHoursChange = (value: string) => {
+        // Разрешаем только цифры и ограничиваем длину
+        if (value !== '' && (!/^\d+$/.test(value) || value.length > 5)) {
+            return;
+        }
+
+        const numValue = value === '' ? 0 : parseInt(value);
+
+        if (value !== '' && numValue > 1000) {
+            setTotalHoursError('Количество часов не может быть больше 1000');
+        } else if (value !== '' && numValue < 1) {
+            setTotalHoursError('Количество часов должно быть больше 0');
+        } else {
+            setTotalHoursError(null);
+        }
+
+        handleDisciplineInputChange('totalHours', numValue);
     };
 
     const validateDisciplineForm = (): string | null => {
@@ -383,6 +472,22 @@ const ProgramEditPage = () => {
         if (disciplineFormData.totalHours < 1) {
             return 'Количество часов должно быть больше 0';
         }
+
+        // Проверяем на дубликаты: в том же семестре не должно быть дисциплины с таким же названием
+        const duplicateExists = disciplines.some(d => {
+            // Если редактируем, исключаем текущую дисциплину из проверки
+            if (selectedDiscipline && d.id === selectedDiscipline.id) {
+                return false;
+            }
+            // Проверяем совпадение названия (без учета регистра) и семестра
+            return d.name.trim().toLowerCase() === disciplineFormData.name.trim().toLowerCase() &&
+                   d.semester === disciplineFormData.semester;
+        });
+
+        if (duplicateExists) {
+            return `Дисциплина "${disciplineFormData.name.trim()}" уже существует в ${disciplineFormData.semester} семестре`;
+        }
+
         return null;
     };
 
@@ -430,31 +535,38 @@ const ProgramEditPage = () => {
         }
     };
 
-    const handleDeleteDiscipline = async () => {
-        if (!programId || !selectedDiscipline) return;
+    const handleRequestDeleteDiscipline = (discipline: DisciplineResponse) => {
+        setDisciplineToDelete(discipline);
+        setShowDeleteDisciplineModal(true);
+    };
 
-        if (!window.confirm('Вы уверены, что хотите удалить эту дисциплину?')) {
-            return;
-        }
+    const handleConfirmDeleteDiscipline = async () => {
+        if (!programId || !disciplineToDelete) return;
 
         try {
-            setSavingDiscipline(true);
-            await deleteDiscipline(parseInt(programId), selectedDiscipline.id);
+            setDeletingDisciplineId(disciplineToDelete.id);
+            setShowDeleteDisciplineModal(false);
+            await deleteDiscipline(parseInt(programId), disciplineToDelete.id);
 
             // Удаляем из локального списка
-            setDisciplines(prev => prev.filter(d => d.id !== selectedDiscipline.id));
+            setDisciplines(prev => prev.filter(d => d.id !== disciplineToDelete.id));
             setProgramData((prev: any) => ({
                 ...prev,
-                disciplines: (prev.disciplines || []).filter((d: DisciplineResponse) => d.id !== selectedDiscipline.id)
+                disciplines: (prev.disciplines || []).filter((d: DisciplineResponse) => d.id !== disciplineToDelete.id)
             }));
 
-            handleCloseDisciplineModal();
+            setDisciplineToDelete(null);
         } catch (err: any) {
             console.error('Ошибка удаления дисциплины:', err);
-            setDisciplineError(err.response?.data?.message || err.message || 'Не удалось удалить дисциплину');
+            alert(err.response?.data?.message || err.message || 'Не удалось удалить дисциплину');
         } finally {
-            setSavingDiscipline(false);
+            setDeletingDisciplineId(null);
         }
+    };
+
+    const handleCancelDeleteDiscipline = () => {
+        setShowDeleteDisciplineModal(false);
+        setDisciplineToDelete(null);
     };
 
     const [showDeleteModal, setShowDeleteModal] = React.useState(false);
@@ -788,18 +900,35 @@ const ProgramEditPage = () => {
                                             </thead>
                                             <tbody>
                                                 {disciplines.map((discipline) => (
-                                                    <tr key={discipline.id}>
+                                                    <tr key={discipline.id} className={deletingDisciplineId === discipline.id ? 'opacity-50' : ''}>
                                                         <td>{discipline.name}</td>
                                                         <td>{discipline.semester}</td>
                                                         <td>{discipline.totalHours}</td>
                                                         <td className="text-end">
-                                                            <Button
-                                                                variant="outline-primary"
-                                                                size="sm"
-                                                                onClick={() => handleOpenEditDisciplineModal(discipline)}
-                                                            >
-                                                                Редактировать
-                                                            </Button>
+                                                            <div className="d-flex gap-2 justify-content-end">
+                                                                <Button
+                                                                    variant="outline-primary"
+                                                                    size="sm"
+                                                                    onClick={() => handleOpenEditDisciplineModal(discipline)}
+                                                                    disabled={deletingDisciplineId === discipline.id}
+                                                                >
+                                                                    Редактировать
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline-danger"
+                                                                    size="sm"
+                                                                    onClick={() => handleRequestDeleteDiscipline(discipline)}
+                                                                    disabled={deletingDisciplineId === discipline.id}
+                                                                >
+                                                                    {deletingDisciplineId === discipline.id ? (
+                                                                        <>
+                                                                            <Spinner animation="border" size="sm" />
+                                                                        </>
+                                                                    ) : (
+                                                                        'Удалить'
+                                                                    )}
+                                                                </Button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -916,27 +1045,47 @@ const ProgramEditPage = () => {
                                 placeholder="Например: Математический анализ"
                                 value={disciplineFormData.name}
                                 onChange={(e) => handleDisciplineInputChange('name', e.target.value)}
+                                isInvalid={!!duplicateError}
                             />
+                            <Form.Control.Feedback type="invalid">
+                                {duplicateError}
+                            </Form.Control.Feedback>
                         </Form.Group>
 
                         <Form.Group className="mb-3">
                             <Form.Label>Семестр *</Form.Label>
                             <Form.Control
-                                type="number"
-                                min="1"
-                                value={disciplineFormData.semester}
-                                onChange={(e) => handleDisciplineInputChange('semester', parseInt(e.target.value) || 1)}
+                                type="text"
+                                placeholder="Например: 1"
+                                value={disciplineFormData.semester === 0 ? '' : disciplineFormData.semester}
+                                onChange={(e) => handleSemesterChange(e.target.value)}
+                                isInvalid={!!semesterError}
+                                maxLength={5}
                             />
+                            <Form.Control.Feedback type="invalid">
+                                {semesterError}
+                            </Form.Control.Feedback>
+                            <Form.Text className="text-muted">
+                                Укажите номер семестра (от 1 до 12)
+                            </Form.Text>
                         </Form.Group>
 
                         <Form.Group className="mb-3">
                             <Form.Label>Количество часов *</Form.Label>
                             <Form.Control
-                                type="number"
-                                min="1"
-                                value={disciplineFormData.totalHours}
-                                onChange={(e) => handleDisciplineInputChange('totalHours', parseInt(e.target.value) || 0)}
+                                type="text"
+                                placeholder="Например: 72"
+                                value={disciplineFormData.totalHours === 0 ? '' : disciplineFormData.totalHours}
+                                onChange={(e) => handleTotalHoursChange(e.target.value)}
+                                isInvalid={!!totalHoursError}
+                                maxLength={5}
                             />
+                            <Form.Control.Feedback type="invalid">
+                                {totalHoursError}
+                            </Form.Control.Feedback>
+                            <Form.Text className="text-muted">
+                                Укажите количество часов (от 1 до 1000)
+                            </Form.Text>
                         </Form.Group>
 
                         {disciplineError && (
@@ -947,19 +1096,21 @@ const ProgramEditPage = () => {
                     </Form>
                 </Modal.Body>
                 <Modal.Footer>
-                    {selectedDiscipline && (
-                        <Button
-                            variant="danger"
-                            onClick={handleDeleteDiscipline}
-                            disabled={savingDiscipline}
-                        >
-                            Удалить
-                        </Button>
-                    )}
                     <Button variant="secondary" onClick={handleCloseDisciplineModal} disabled={savingDiscipline}>
                         Отмена
                     </Button>
-                    <Button variant="primary" onClick={handleSaveDiscipline} disabled={savingDiscipline}>
+                    <Button
+                        variant="primary"
+                        onClick={handleSaveDiscipline}
+                        disabled={
+                            savingDiscipline ||
+                            !!semesterError ||
+                            !!totalHoursError ||
+                            !!duplicateError ||
+                            disciplineFormData.semester === 0 ||
+                            disciplineFormData.totalHours === 0
+                        }
+                    >
                         {savingDiscipline ? (
                             <>
                                 <Spinner animation="border" size="sm" className="me-2" />
@@ -985,6 +1136,28 @@ const ProgramEditPage = () => {
                         Отмена
                     </Button>
                     <Button variant="danger" onClick={handleConfirmDeleteCondition}>
+                        Удалить
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Модальное окно подтверждения удаления дисциплины */}
+            <Modal show={showDeleteDisciplineModal} onHide={handleCancelDeleteDiscipline} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Подтвердите удаление</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {disciplineToDelete && (
+                        <p>
+                            Вы уверены, что хотите удалить дисциплину <strong>"{disciplineToDelete.name}"</strong>? Это действие необратимо.
+                        </p>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleCancelDeleteDiscipline}>
+                        Отмена
+                    </Button>
+                    <Button variant="danger" onClick={handleConfirmDeleteDiscipline}>
                         Удалить
                     </Button>
                 </Modal.Footer>
