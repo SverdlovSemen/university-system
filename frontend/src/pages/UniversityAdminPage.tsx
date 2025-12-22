@@ -226,6 +226,46 @@ const UniversityAdminPage = () => {
         setSaveSuccess(false);
     };
 
+    // Обработчик ввода телефона с форматированием
+    const handlePhoneChange = (value: string) => {
+        // Удаляем все нецифровые символы
+        const digits = value.replace(/\D/g, '');
+
+        // Ограничиваем длину до 11 цифр (российский формат)
+        const truncated = digits.slice(0, 11);
+
+        // Форматируем номер
+        let formatted = '';
+        if (truncated.length > 0) {
+            formatted = '+7';
+            if (truncated.length > 1) {
+                formatted += ' (' + truncated.slice(1, 4);
+                if (truncated.length > 4) {
+                    formatted += ') ' + truncated.slice(4, 7);
+                    if (truncated.length > 7) {
+                        formatted += '-' + truncated.slice(7, 9);
+                        if (truncated.length > 9) {
+                            formatted += '-' + truncated.slice(9, 11);
+                        }
+                    }
+                }
+            }
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            adminPhone: formatted
+        }));
+
+        setFieldErrors(prev => ({
+            ...prev,
+            adminPhone: ''
+        }));
+
+        setSaveError(null);
+        setSaveSuccess(false);
+    };
+
     // Обработчик обновления университета
     const handleUpdate = async () => {
         if (!university?.id) {
@@ -303,6 +343,19 @@ const UniversityAdminPage = () => {
                 setFieldErrors(prev => ({
                     ...prev,
                     adminEmail: emailError
+                }));
+                setSaveError('Проверьте правильность заполнения полей');
+                return;
+            }
+        }
+
+        // Валидация телефона администрации если указан
+        if (formData.adminPhone && formData.adminPhone.trim()) {
+            const phoneDigits = formData.adminPhone.replace(/\D/g, '');
+            if (phoneDigits.length > 0 && phoneDigits.length !== 11) {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    adminPhone: 'Телефон должен содержать 11 цифр'
                 }));
                 setSaveError('Проверьте правильность заполнения полей');
                 return;
@@ -764,17 +817,17 @@ const UniversityAdminPage = () => {
                                             <Form.Group>
                                                 <Form.Label><strong>Телефон администрации</strong></Form.Label>
                                                 <Form.Control
-                                                    type="tel"
+                                                    type="text"
                                                     value={formData.adminPhone}
-                                                    onChange={(e) => handleInputChange('adminPhone', e.target.value)}
-                                                    onKeyDown={(e)=>{
-                                                        if(!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight/.test(e.key)) {
-                                                            e.preventDefault();
-                                                        }
-                                                    }}
-                                                    maxLength={12}
-                                                    placeholder="79999999999"
+                                                    onChange={(e) => handlePhoneChange(e.target.value)}
+                                                    placeholder="+7 (999) 999-99-99"
+                                                    isInvalid={!!fieldErrors.adminPhone}
                                                 />
+                                                {fieldErrors.adminPhone && (
+                                                    <Form.Control.Feedback type="invalid">
+                                                        {fieldErrors.adminPhone}
+                                                    </Form.Control.Feedback>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                     </Row>

@@ -106,6 +106,45 @@ const FacultyEditPage = () => {
         }
     };
 
+    // Обработчик ввода телефона с форматированием
+    const handlePhoneChange = (value: string) => {
+        // Удаляем все нецифровые символы
+        const digits = value.replace(/\D/g, '');
+
+        // Ограничиваем длину до 11 цифр (российский формат)
+        const truncated = digits.slice(0, 11);
+
+        // Форматируем номер
+        let formatted = '';
+        if (truncated.length > 0) {
+            formatted = '+7';
+            if (truncated.length > 1) {
+                formatted += ' (' + truncated.slice(1, 4);
+                if (truncated.length > 4) {
+                    formatted += ') ' + truncated.slice(4, 7);
+                    if (truncated.length > 7) {
+                        formatted += '-' + truncated.slice(7, 9);
+                        if (truncated.length > 9) {
+                            formatted += '-' + truncated.slice(9, 11);
+                        }
+                    }
+                }
+            }
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            phone: formatted
+        }));
+        setSaveError(null);
+        if (fieldErrors.phone) {
+            setFieldErrors(prev => ({
+                ...prev,
+                phone: ''
+            }));
+        }
+    };
+
     // Валидация формы
     const validateForm = (): boolean => {
         const errors: {[key: string]: string} = {};
@@ -186,6 +225,15 @@ const FacultyEditPage = () => {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(formData.email.trim())) {
                 errors.email = 'Некорректный формат email';
+                hasErrors = true;
+            }
+        }
+
+        // Валидация телефона если указан
+        if (formData.phone && formData.phone.trim()) {
+            const phoneDigits = formData.phone.replace(/\D/g, '');
+            if (phoneDigits.length > 0 && phoneDigits.length !== 11) {
+                errors.phone = 'Телефон должен содержать 11 цифр';
                 hasErrors = true;
             }
         }
@@ -413,17 +461,17 @@ const FacultyEditPage = () => {
                                 <Form.Group>
                                     <Form.Label><strong>Телефон</strong></Form.Label>
                                     <Form.Control
-                                        type="number"
+                                        type="text"
                                         value={formData.phone}
-                                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                                        placeholder="79999999999"
-                                        onKeyDown={(e)=>{
-                                            if(!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight/.test(e.key)) {
-                                                e.preventDefault();
-                                            }
-                                        }}
-                                        maxLength={13}
+                                        onChange={(e) => handlePhoneChange(e.target.value)}
+                                        placeholder="+7 (999) 999-99-99"
+                                        isInvalid={!!fieldErrors.phone}
                                     />
+                                    {fieldErrors.phone && (
+                                        <Form.Control.Feedback type="invalid">
+                                            {fieldErrors.phone}
+                                        </Form.Control.Feedback>
+                                    )}
                                 </Form.Group>
                             </Col>
                         </Row>
