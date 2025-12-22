@@ -119,14 +119,30 @@ const FacultyEditPage = () => {
             errors.fullName = 'Полное название не должно превышать 100 символов';
             hasErrors = true;
         } else {
-            // Проверка на уникальность полного названия
-            const duplicateByFullName = existingFaculties.find(f =>
-                f.fullName.toLowerCase() === formData.fullName.trim().toLowerCase() &&
-                (!isEditMode || f.id !== parseInt(facultyId!))
-            );
-            if (duplicateByFullName) {
-                errors.fullName = 'Факультет с таким полным названием уже существует в этом университете';
+            // Проверка на наличие хотя бы одной буквы (русской или английской)
+            const hasLetter = /[а-яёА-ЯЁa-zA-Z]/.test(formData.fullName);
+            if (!hasLetter) {
+                errors.fullName = 'Полное название должно содержать хотя бы одну букву';
                 hasErrors = true;
+            }
+
+            // Проверка на недопустимые специальные символы
+            const hasInvalidChars = /[%$@#&*<>{}[\]\\|`~^]/.test(formData.fullName);
+            if (hasInvalidChars) {
+                errors.fullName = 'Полное название содержит недопустимые символы';
+                hasErrors = true;
+            }
+
+            // Проверка на уникальность полного названия
+            if (!hasErrors) {
+                const duplicateByFullName = existingFaculties.find(f =>
+                    f.fullName.toLowerCase() === formData.fullName.trim().toLowerCase() &&
+                    (!isEditMode || f.id !== parseInt(facultyId!))
+                );
+                if (duplicateByFullName) {
+                    errors.fullName = 'Факультет с таким полным названием уже существует в этом университете';
+                    hasErrors = true;
+                }
             }
         }
 
@@ -138,14 +154,30 @@ const FacultyEditPage = () => {
             errors.abbreviation = 'Аббревиатура не должна превышать 20 символов';
             hasErrors = true;
         } else {
-            // Проверка на уникальность аббревиатуры
-            const duplicateByAbbreviation = existingFaculties.find(f =>
-                f.abbreviation?.toLowerCase() === formData.abbreviation?.trim().toLowerCase() &&
-                (!isEditMode || f.id !== parseInt(facultyId!))
-            );
-            if (duplicateByAbbreviation) {
-                errors.abbreviation = 'Факультет с такой аббревиатурой уже существует в этом университете';
+            // Проверка на наличие хотя бы одной буквы (русской или английской)
+            const hasLetter = /[а-яёА-ЯЁa-zA-Z]/.test(formData.abbreviation);
+            if (!hasLetter) {
+                errors.abbreviation = 'Аббревиатура должна содержать хотя бы одну букву';
                 hasErrors = true;
+            }
+
+            // Проверка на недопустимые специальные символы
+            const hasInvalidChars = /[%$@#&*<>{}[\]\\|`~^]/.test(formData.abbreviation);
+            if (hasInvalidChars) {
+                errors.abbreviation = 'Аббревиатура содержит недопустимые символы';
+                hasErrors = true;
+            }
+
+            // Проверка на уникальность аббревиатуры
+            if (!hasErrors) {
+                const duplicateByAbbreviation = existingFaculties.find(f =>
+                    f.abbreviation?.toLowerCase() === formData.abbreviation?.trim().toLowerCase() &&
+                    (!isEditMode || f.id !== parseInt(facultyId!))
+                );
+                if (duplicateByAbbreviation) {
+                    errors.abbreviation = 'Факультет с такой аббревиатурой уже существует в этом университете';
+                    hasErrors = true;
+                }
             }
         }
 
@@ -269,6 +301,11 @@ const FacultyEditPage = () => {
                                         maxLength={100}
                                         required
                                         isInvalid={!!fieldErrors.fullName}
+                                        onKeyDown={(e) => {
+                                            if (/[%$@#&*<>{}[\]\\|`~^]/.test(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                        }}
                                     />
                                     {fieldErrors.fullName && (
                                         <Form.Control.Feedback type="invalid">
@@ -292,6 +329,11 @@ const FacultyEditPage = () => {
                                         maxLength={20}
                                         required
                                         isInvalid={!!fieldErrors.abbreviation}
+                                        onKeyDown={(e) => {
+                                            if (/[%$@#&*<>{}[\]\\|`~^]/.test(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                        }}
                                     />
                                     {fieldErrors.abbreviation && (
                                         <Form.Control.Feedback type="invalid">
